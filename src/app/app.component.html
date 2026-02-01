@@ -1,0 +1,591 @@
+
+<!-- app.component.html -->
+
+<!-- MAIN CONTAINER -->
+<div class="min-h-screen bg-slate-50 font-sans text-slate-800 relative flex flex-col">
+
+  <!-- HEADER (Global) -->
+  <header
+    class="bg-white/80 backdrop-blur-md border-b border-slate-200 h-16 flex items-center justify-between px-8 sticky top-0 z-40 transition-all">
+    <div class="flex items-center gap-3 cursor-pointer group" (click)="goToHome()">
+      <div
+        class="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-slate-200 group-hover:shadow-blue-200 group-hover:bg-blue-600 transition-all">
+        B
+      </div>
+      <div class="flex flex-col">
+        <span class="text-lg font-bold tracking-tight text-slate-900 leading-none">
+          BSPA<span class="text-blue-600">Dashboard</span>
+        </span>
+        <span class="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-none mt-0.5">
+          Brake System Project Assesment
+        </span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-6">
+      <!-- Role Switcher -->
+     
+
+      <div class="h-8 w-px bg-slate-200"></div>
+
+      <div class="flex items-center gap-3">
+        <div class="text-right hidden md:block">
+          <div class="text-xs font-bold text-slate-700">Shaam Karym</div>
+          <div class="text-[10px] text-slate-400">Lead Engineer</div>
+        </div>
+        <div
+          class="w-9 h-9 rounded-full bg-slate-200 border-2 border-white shadow-sm flex items-center justify-center text-slate-600 font-bold text-xs">
+          SK
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================
+       HOME VIEW (Wizard)
+       ========================= -->
+  <main *ngIf="currentView === 'home'"
+    class="flex-1 max-w-6xl mx-auto w-full p-8 flex flex-col items-center justify-center animate-fade-in">
+
+    <div class="text-center mb-12 space-y-4">
+      <h1 class="text-5xl font-extrabold text-slate-900 tracking-tight">Initiate Your BSPA</h1>
+      <p class="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
+        Select your project type and enter the EPC reference to begin the BSPA process.
+      </p>
+    </div>
+
+    <!-- STEP: TYPE -->
+    <ng-container *ngIf="currentStep === 'type'">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl">
+
+        <!-- Card: New BSPA -->
+        <div (click)="selectType('new')"
+          class="group bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-blue-100/50 cursor-pointer transition-all hover:-translate-y-1 ring-blue-500 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg class="w-32 h-32 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
+            </svg>
+          </div>
+          <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900 mb-2">New BSPA</h3>
+        </div>
+
+        <!-- Card: Minor BSPA -->
+        <div (click)="selectType('minor')"
+          class="group bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-100/50 cursor-pointer transition-all hover:-translate-y-1 ring-indigo-500 relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg class="w-32 h-32 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+            </svg>
+          </div>
+          <div
+            class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900 mb-2">Running Change / Minor BSPA </h3>
+        </div>
+<!-- Card: Check BSPA Status -->
+<div (click)="selectStatusCheck()"
+  class="group bg-white p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-emerald-100/50 cursor-pointer transition-all hover:-translate-y-1 ring-emerald-500 relative overflow-hidden">
+  <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+    <svg class="w-32 h-32 text-emerald-600" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Z" />
+    </svg>
+  </div>
+
+  <div
+    class="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-emerald-200">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 11.08V12a8 8 0 1 1-4.87-7.34" />
+      <path d="m22 4-10 10-3-3" />
+    </svg>
+  </div>
+
+  <h3 class="text-2xl font-bold text-slate-900 mb-2">Check BSPA Status</h3>
+  <p class="text-slate-500 font-medium">Enter Jira/BSPA/EPC to check status.</p>
+</div>
+
+      </div>
+    </ng-container>
+
+    <!-- STEP: EPC (optional) -->
+    <ng-container *ngIf="currentStep === 'epc'">
+      <div class="w-full max-w-xl mx-auto space-y-6 animate-slide-up">
+
+        <div class="text-center">
+          <h2 class="text-2xl font-bold text-slate-900">Enter EPC Reference (optional)</h2>
+          <p class="text-sm text-slate-500 mt-2">
+            You can continue without EPC, but it helps identify your project.
+          </p>
+        </div>
+
+        <div class="w-full max-w-md mx-auto relative group">
+          <div
+            class="absolute -inset-1 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-500">
+          </div>
+
+          <div class="relative bg-white rounded-xl shadow-xl p-2 flex items-center ring-1 ring-slate-100">
+            <div class="pl-4 text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+            </div>
+            <input type="text" [(ngModel)]="projectData.epcNumber" (input)="showEpcError = false"
+              placeholder="Enter EPC Number (optional)"
+              class="w-full px-4 py-3 bg-transparent outline-none text-slate-800 placeholder-slate-400 font-medium" />
+          </div>
+
+          <p *ngIf="showEpcError"
+            class="absolute -bottom-6 left-0 text-red-500 text-xs font-bold animate-pulse flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            This field is required
+          </p>
+        </div>
+
+        <div class="flex items-center justify-center gap-3">
+          <button (click)="goToHome()"
+            class="px-5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-50 transition-colors">
+            Back
+          </button>
+
+          <button (click)="confirmEpc()"
+            class="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+            Continue
+          </button>
+
+          <button (click)="currentStep = 'method'"
+            class="px-4 py-2 rounded-xl text-slate-500 font-bold hover:bg-slate-100 transition-colors">
+            Skip
+          </button>
+        </div>
+      </div>
+    </ng-container>
+    <!-- STEP: STATUS CHECK -->
+<ng-container *ngIf="currentStep === 'statusCheck'">
+  <div class="w-full max-w-2xl mb-12 animate-slide-up">
+
+    <div class="text-center mb-6">
+      <h2 class="text-2xl font-bold text-slate-900">Check BSPA Status</h2>
+      <p class="text-sm text-slate-500 mt-2">
+        Please enter all required references to check the current status.
+      </p>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          Jira Ticket Number *
+        </label>
+        <input [(ngModel)]="statusCheckData.jiraTicketNumber" (input)="showStatusError=false" type="text"
+          placeholder="e.g. JIRA-12345"
+          class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          BSPA Number *
+        </label>
+        <input [(ngModel)]="statusCheckData.bspaNumber" (input)="showStatusError=false" type="text"
+          placeholder="e.g. BSPA-2026-001"
+          class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          EPC Number *
+        </label>
+        <input [(ngModel)]="statusCheckData.epcNumber" (input)="showStatusError=false" type="text"
+          placeholder="e.g. EPC-..."
+          class="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400" />
+      </div>
+
+      <p *ngIf="showStatusError" class="text-red-500 text-sm font-semibold">
+        Please fill in all required fields.
+      </p>
+
+      <div class="flex justify-between pt-2">
+        <button (click)="goToHome()"
+          class="px-5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-50 transition-colors">
+          Back
+        </button>
+
+        <button (click)="confirmStatusCheck()"
+          class="bg-emerald-600 text-white hover:bg-emerald-700 px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-200 transition-all">
+          Continue
+        </button>
+      </div>
+
+    </div>
+  </div>
+</ng-container>
+
+
+    <!-- STEP: METHOD (Upload + Manual) -->
+    <ng-container *ngIf="currentStep === 'method'">
+      <div class="mt-12 w-full max-w-4xl animate-slide-up">
+
+        <div class="flex items-center gap-4 mb-6">
+          <div class="h-px bg-slate-200 flex-1"></div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2">Select Method</span>
+          <div class="h-px bg-slate-200 flex-1"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <!-- Upload Card -->
+          <div
+            class="border border-dashed border-slate-300 bg-slate-50 rounded-2xl p-6 flex items-center gap-4 hover:bg-white hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group"
+            (click)="uploadFile()">
+
+            <div
+              class="w-12 h-12 bg-white rounded-full border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:border-blue-200">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" x2="12" y1="3" y2="15" />
+              </svg>
+            </div>
+
+            <div>
+              <h4 class="font-bold text-slate-700 group-hover:text-blue-600">Upload BSPA Input Parameter Sheet</h4>
+              <p class="text-xs text-slate-500">.xlsm</p>
+            </div>
+
+            <!-- hidden file input -->
+            <input #fileInput type="file" class="hidden" accept=".xlsm" (change)="onFileSelected($event)" />
+          </div>
+
+          <!-- Manual Input Card -->
+          <div
+            class="bg-slate-900 text-white rounded-2xl p-6 flex items-center gap-4 shadow-xl shadow-slate-300 hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer"
+            (click)="goToSheet()">
+
+            <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" />
+                <path d="M3 9h18" />
+                <path d="M3 15h18" />
+                <path d="M9 3v18" />
+                <path d="M15 3v18" />
+              </svg>
+            </div>
+
+            <div>
+              <h4 class="font-bold text-lg">Manual Input</h4>
+            </div>
+
+            <div class="ml-auto">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14" />
+                <path d="m12 5 7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="mt-8 flex justify-center">
+          <button (click)="currentStep='epc'"
+            class="px-5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-50 transition-colors">
+            Back
+          </button>
+        </div>
+      </div>
+    </ng-container>
+
+  </main>
+
+  <!-- =========================
+       SHEET VIEW
+       ========================= -->
+  <main *ngIf="currentView === 'sheet'" class="flex-1 flex flex-col animate-fade-in bg-slate-50/50 overflow-hidden">
+
+    <!-- Toolbar -->
+    <div class="h-16 border-b border-slate-200 flex items-center px-6 justify-between bg-white/80 backdrop-blur-sm z-20">
+      <div class="flex items-center gap-3">
+        <div class="flex flex-col">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Project</span>
+          <span class="font-bold text-slate-800">{{ projectData.epcNumber || '—' }}</span>
+        </div>
+        <div class="h-8 w-px bg-slate-200 mx-2"></div>
+
+        <!-- Toolbar Actions -->
+        <button
+          class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-slate-200 transition-all flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
+          </svg>
+          Save
+        </button>
+      </div>
+
+      <!-- Layout Indicator -->
+      <div class="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-lg border border-slate-200">
+        <div class="w-2 h-2 rounded-full" [class.bg-green-500]="userRole === 'standard'"
+          [class.bg-purple-500]="userRole === 'expert'"></div>
+        <span class="text-xs font-bold text-slate-600 uppercase">{{ userRole }} Mode</span>
+      </div>
+    </div>
+
+    <!-- CONTENT AREA (Scrollable) -->
+    <div class="flex-1 overflow-y-auto bg-slate-50 relative scroll-smooth">
+
+      <!-- === LAYOUT: EXPERT MODE === -->
+      <div *ngIf="userRole === 'expert'" class="max-w-7xl mx-auto p-8 space-y-12 pb-24 animate-fade-in">
+
+        <!-- 1) PROJECT DESCRIPTION -->
+        <section>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-200">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" x2="8" y1="13" y2="13" />
+                <line x1="16" x2="8" y1="17" y2="17" />
+                <line x1="10" x2="8" y1="9" y2="9" />
+              </svg>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800">Project Description</h2>
+          </div>
+
+          <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div class="flex bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-500 uppercase tracking-wider">
+              <div class="w-1/3 p-4 border-r border-slate-200">Attribute Name</div>
+              <div class="w-2/3 p-4">Description / Value</div>
+            </div>
+
+            <div class="flex border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+              <div class="w-1/3 p-4 border-r border-slate-200 font-semibold text-slate-700 bg-slate-50/30">
+                ePC2.0 System No.
+              </div>
+              <div class="w-2/3 p-1">
+                <input type="text" [(ngModel)]="projectData.projectName" 
+                  class="w-full h-full px-3 py-2 bg-transparent outline-none text-slate-800 font-medium placeholder-slate-300 focus:bg-white focus:ring-2 focus:ring-blue-100 rounded" />
+              </div>
+            </div>
+            <div class="flex border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+              <div class="w-1/3 p-4 border-r border-slate-200 font-semibold text-slate-700 bg-slate-50/30">
+                 Customer / OEM
+              </div>
+              <div class="w-2/3 p-1">
+                <input type="text" [(ngModel)]="projectData.projectName" 
+                  class="w-full h-full px-3 py-2 bg-transparent outline-none text-slate-800 font-medium placeholder-slate-300 focus:bg-white focus:ring-2 focus:ring-blue-100 rounded" />
+              </div>
+            </div>
+
+<div class="flex border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+  <div class="w-1/3 p-4 border-r border-slate-200 font-semibold text-slate-700 bg-slate-50/30">
+   Brake System Modulation
+  </div>
+  <div class="w-2/3 p-1">
+    <select
+      [(ngModel)]="projectData.customer"
+      class="w-full h-full px-3 py-2 bg-transparent outline-none text-slate-800 font-medium
+             focus:bg-white focus:ring-2 focus:ring-blue-100 rounded cursor-pointer">
+
+      <option value="" disabled selected>..</option>
+      <option *ngFor="let c of customers" [value]="c">{{ c }}</option>
+
+    </select>
+  </div>
+</div>
+
+
+            
+          </div>
+        </section>
+
+        <!-- Divider -->
+        <div class="relative py-4">
+          <div class="absolute inset-0 flex items-center" aria-hidden="true">
+            <div class="w-full border-t border-slate-200"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="px-4 bg-slate-50 text-sm text-slate-400 font-medium uppercase tracking-widest">
+              Technical Parameters
+            </span>
+          </div>
+        </div>
+
+        <!-- 2) PARAMETER GROUPS -->
+        <ng-container *ngFor="let group of parameterGroups; let gi = index">
+          <section>
+            <div class="flex items-center gap-3 mb-4">
+              <div
+                class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500 font-bold text-sm shadow-sm">
+                {{ gi + 1 }}
+              </div>
+              <h3 class="text-lg font-bold text-slate-700">{{ group.groupName }}</h3>
+            </div>
+
+            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
+              <!-- Header -->
+              <div class="flex min-w-max border-b border-slate-200 bg-slate-50">
+                
+                <div class="w-80 p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200">
+                    Parameter
+                </div>
+
+                <div class="w-24 p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-center">
+                  Unit
+                </div>
+
+              <div class="w-32 p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-center">
+                Check
+              </div>
+
+              <div class="w-72 p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200">
+                Comments
+              </div>
+
+  <!-- Variants dynamic -->
+  <div class="flex-1 flex">
+    <div *ngFor="let v of variants; let vi = index"
+      class="w-40 p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider"
+      [class.border-r]="vi !== variants.length - 1"
+      [class.border-slate-200]="vi !== variants.length - 1">
+      {{ v.name }}
+    </div>
+  </div>
+
+                <!-- Variants dynamic -->
+              
+              </div>
+
+              <!-- Rows -->
+              <!-- Rows -->
+<div *ngFor="let param of group.parameters"
+  class="flex min-w-max border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+
+  <!-- 1) Parameter Name -->
+  <div class="w-80 p-3 border-r border-slate-200 flex items-center">
+    <span class="text-sm font-semibold text-slate-700">{{ param.name }}</span>
+  </div>
+
+  <!-- 2) Unit -->
+  <div class="w-24 p-3 border-r border-slate-200 flex items-center justify-center">
+    <span class="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded">
+      {{ param.unit || '—' }}
+    </span>
+  </div>
+
+  <!-- 3) Parameter Check -->
+  <div class="w-32 p-2 border-r border-slate-200 flex items-center justify-center">
+    <select [(ngModel)]="param.checkStatus"
+      class="w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none
+             focus:ring-2 focus:ring-blue-200">
+      <option value="">—</option>
+      <option value="ok">OK</option>
+      <option value="nok">NOK</option>
+      <option value="na">N/A</option>
+    </select>
+  </div>
+
+  <!-- 4) Comments -->
+  <div class="w-72 p-1 border-r border-slate-200">
+    <input type="text" [(ngModel)]="param.userComment"
+      class="w-full h-full px-3 py-2 bg-transparent outline-none text-sm
+             focus:bg-white focus:ring-2 focus:ring-blue-100 rounded transition-all"
+      placeholder="Add comment..." />
+  </div>
+
+  <!-- 5) Values per Variant -->
+  <div class="flex-1 flex">
+    <div *ngFor="let v of variants; let vi = index"
+      class="w-40 p-2 flex items-center justify-center"
+      [class.border-r]="vi !== variants.length - 1"
+      [class.border-slate-200]="vi !== variants.length - 1">
+
+      <ng-container *ngTemplateOutlet="inputTemplate; context: { $implicit: param, variant: v }"></ng-container>
+    </div>
+  </div>
+
+</div>
+
+            </div>
+          </section>
+        </ng-container>
+
+      </div>
+
+      <!-- === LAYOUT: STANDARD MODE (optional placeholder) === -->
+      <div *ngIf="userRole === 'standard'" class="max-w-5xl mx-auto p-8 space-y-6 pb-24 animate-fade-in">
+        <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <div class="text-sm text-slate-500">
+            Standard mode UI can go here (you can keep your previous standard layout if you want).
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- SHARED INPUT TEMPLATE -->
+  <ng-template #inputTemplate let-row let-variant="variant">
+
+    <!-- Number/Text -->
+    <input *ngIf="row.type === 'number' || row.type === 'text'"
+      type="text"
+      [(ngModel)]="variant.values[row.id]"
+      [placeholder]="row.type === 'number' ? '0.00' : 'Enter text...'"
+      class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800 transition-all placeholder:text-slate-300" />
+
+    <!-- Select -->
+    <div *ngIf="row.type === 'select'" class="relative w-full">
+      <select [(ngModel)]="variant.values[row.id]"
+        class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm text-slate-800 appearance-none cursor-pointer">
+        <option *ngFor="let opt of row.options" [value]="opt">{{ opt }}</option>
+      </select>
+      <div class="absolute right-3 top-2.5 pointer-events-none text-slate-400">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+    </div>
+
+  </ng-template>
+
+  <!-- CONTACT BUTTON -->
+  <div class="fixed bottom-6 right-6 z-50">
+    <button
+      class="bg-slate-900 text-white rounded-full p-4 shadow-xl hover:bg-blue-600 hover:scale-110 transition-all flex items-center gap-3 pr-6 group">
+      <div class="bg-white/20 rounded-full p-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+        </svg>
+      </div>
+      <span class="font-bold text-sm tracking-wide">Help & Support</span>
+    </button>
+  </div>
+
+</div>
