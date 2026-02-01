@@ -1,0 +1,75 @@
+<div class="flex-1 max-w-6xl mx-auto w-full p-8 flex flex-col items-center justify-center animate-fade-in">
+
+    <!-- STEP: METHOD (Upload / Manual) -->
+    <ng-container *ngIf="currentStep === 'method'">
+        <div class="w-full max-w-4xl animate-slide-up">
+
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-slate-900">New Project Setup</h2>
+                <p class="text-slate-500 mt-2">Choose how you want to start your new BSPA.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Upload Card -->
+                <div class="border border-dashed border-slate-300 bg-slate-50 rounded-2xl p-8 flex flex-col items-center text-center gap-4 hover:bg-white hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer group"
+                    (click)="uploadFile()">
+
+                    <div
+                        class="w-16 h-16 bg-white rounded-full border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:border-blue-200 group-hover:bg-blue-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" x2="12" y1="3" y2="15" />
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-xl text-slate-700 group-hover:text-blue-600">Upload Parameter Sheet
+                        </h4>
+                        <p class="text-sm text-slate-500 mt-1">Import from .xlsm file</p>
+                    </div>
+
+                    <!-- hidden file input -->
+                    <input #fileInput type="file" class="hidden" accept=".xlsm" (change)="onFileSelected($event)" />
+                </div>
+
+                <!-- Manual Input Card -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-8 flex flex-col items-center text-center gap-4 shadow-sm hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group"
+                    (click)="goToSheet()">
+
+                    <div
+                        class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 group-hover:text-blue-600 group-hover:bg-blue-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="18" x="3" y="3" rx="2" />
+                            <path d="M3 9h18" />
+                            <path d="M3 15h18" />
+                            <path d="M9 3v18" />
+                            <path d="M15 3v18" />
+                        </svg>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-xl text-slate-700 group-hover:text-blue-600">Manual Entry</h4>
+                        <p class="text-sm text-slate-500 mt-1">Start with a blank sheet</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="mt-12 flex justify-center">
+                <button (click)="goBackToHome()"
+                    class="px-6 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-50 transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m15 18-6-6 6-6" />
+                    </svg>
+                    Back to Home
+                </button>
+            </div>
+        </div>
+    </ng-container>
+
+</div>
