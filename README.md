@@ -1,59 +1,55 @@
-# SwsDashboard
+# BSPA Dashboard
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.3.
+A modern Angular-based web dashboard for managing and initiating BSPA (Brake System Project Assessment) projects. 
 
-## Development server
 
-To start a local development server, run:
+## 🚀 Features
 
-```bash
-ng serve
+*   **Project Initiation**: 
+    *   **New BSPA**: Start a completely new assessment.
+    *   **Running Change**: Initiate a minor modification (Minor BSPA).
+*   **Excel Integration**: Robust import functionality for `.xlsm`, `.xlsx` parameter sheets using `SheetJS` (xlsx).
+    *   Automatically detects "Project Name", "EPC", and technical parameters regardless of cell position.
+*   **Status Check**: Quick lookup tool for BSPA status using Jira/EPC/BSPA references.
+*   **Dynamic Data Grid**: Responsive parameter sheet view with distinct "Expert" and "Standard" user modes.
+*   **Bosch Branding**: Custom Tailwind config complying with Bosch colors and typography.
+
+## 🛠 Tech Stack
+
+*   **Framework**: Angular 18+ (Standalone Components)
+*   **Styling**: Tailwind CSS (with custom Bosch Theme)
+*   **Utilities**: `xlsx` (Excel Parsing)
+
+## 📂 Project Structure
+
+```
+src/app/
+├── components/
+│   ├── check-status/  # Status lookup form
+│   ├── header/        # Global navigation header
+│   ├── home/          # Main dashboard landing page
+│   ├── new-bspa/      # Setup wizard (Upload / Manual entry)
+│   └── sheet/         # Main data grid / parameter view
+├── services/
+│   └── data.service.ts # State management & Data Store
+└── app.routes.ts       # Application routing definition
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## 📦 Installation & Setup
 
-## Code scaffolding
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Run Development Server**:
+    ```bash
+    ng serve
+    ```
+3.  **Build for Production**:
+    ```bash
+    ng build
+    ```
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## 🎨 Design Notes
+*   **Assets**: Logo assets are stored in `src/assets/`.
+*   **Styles**: Global overrides and animations (e.g., `fade-in`, `slide-up`) are in `styles.css`.

@@ -1,4 +1,4 @@
-<div class="flex-1 max-w-6xl mx-auto w-full p-8 flex flex-col items-center justify-center animate-fade-in">
+<div class="flex-1 max-w-4xl mx-auto w-full p-8 flex flex-col items-center justify-center animate-fade-in">
 
     <!-- STEP: METHOD (Upload / Manual) -->
     <ng-container *ngIf="currentStep === 'method'">
@@ -28,11 +28,13 @@
                     <div>
                         <h4 class="font-bold text-xl text-slate-700 group-hover:text-blue-600">Upload Parameter Sheet
                         </h4>
-                        <p class="text-sm text-slate-500 mt-1">Import from .xlsm file</p>
+                        <!-- Updated text description -->
+                        <p class="text-sm text-slate-500 mt-1">Import from Excel file (.xlsx, .xlsm, .xls)</p>
                     </div>
 
-                    <!-- hidden file input -->
-                    <input #fileInput type="file" class="hidden" accept=".xlsm" (change)="onFileSelected($event)" />
+                    <!-- Updated accept attribute -->
+                    <input #fileInput type="file" class="hidden" accept=".xlsx, .xlsm, .xls, .xlsb"
+                        (change)="onFileSelected($event)" />
                 </div>
 
                 <!-- Manual Input Card -->
