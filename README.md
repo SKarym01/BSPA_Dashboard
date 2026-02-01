@@ -2,8 +2,7 @@
 
 A modern Angular-based web dashboard for managing and initiating BSPA (Brake System Project Assessment) projects. 
 
-
-## 🚀 Features
+## Features
 
 *   **Project Initiation**: 
     *   **New BSPA**: Start a completely new assessment.
@@ -14,13 +13,13 @@ A modern Angular-based web dashboard for managing and initiating BSPA (Brake Sys
 *   **Dynamic Data Grid**: Responsive parameter sheet view with distinct "Expert" and "Standard" user modes.
 *   **Bosch Branding**: Custom Tailwind config complying with Bosch colors and typography.
 
-## 🛠 Tech Stack
+## Tech Stack
 
 *   **Framework**: Angular 18+ (Standalone Components)
 *   **Styling**: Tailwind CSS (with custom Bosch Theme)
 *   **Utilities**: `xlsx` (Excel Parsing)
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 src/app/
@@ -35,7 +34,7 @@ src/app/
 └── app.routes.ts       # Application routing definition
 ```
 
-## 📦 Installation & Setup
+## Installation & Setup
 
 1.  **Install Dependencies**:
     ```bash
@@ -50,6 +49,6 @@ src/app/
     ng build
     ```
 
-## 🎨 Design Notes
+## Design Notes
 *   **Assets**: Logo assets are stored in `src/assets/`.
 *   **Styles**: Global overrides and animations (e.g., `fade-in`, `slide-up`) are in `styles.css`.
