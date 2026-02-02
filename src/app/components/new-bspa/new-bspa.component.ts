@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { read, utils } from 'xlsx';
+import { ExcelExtractor } from '../../utils/excel-extractor';
 
 /**
  * Component for setting up a new BSPA project.
@@ -89,36 +90,36 @@ export class NewBspaComponent implements OnInit {
                 console.log('Raw Sheet Data parsed.');
 
                 // ===================================
-                // ROBUST "KEY-VALUE" FINDER (Heuristic)
+                // USE ROBUST EXCEL EXTRACTOR
                 // ===================================
-                // This function searches for keywords in the grid and tries to find a value 
-                // to the right or below the keyword.
+                const extractor = new ExcelExtractor(rawData);
+
+                // 1. EXTRACT STRUCTURE FIRST (Dynamic Discovery)
+                console.log('Discovering parameter structure from Excel...');
+                const discoveredGroups = extractor.discoverParameterGroups();
+
+                if (discoveredGroups.length > 0) {
+                    console.log(`Discovered ${discoveredGroups.length} groups.`);
+                    // Update DataService with REAL structure from Excel
+                    this.dataService.parameterGroups = discoveredGroups;
+                } else {
+                    console.warn('No structure discovered. Falling back to default.');
+                }
+
+                // 2. EXTRACT VALUES & METADATA
                 const findValue = (keywords: string[]): string => {
-                    for (let r = 0; r < rawData.length; r++) {
+                    for (let r = 0; r < Math.min(rawData.length, 20); r++) {
                         const row = rawData[r];
                         for (let c = 0; c < row.length; c++) {
                             const cellVal = String(row[c] || '').toLowerCase().trim();
-
                             if (keywords.some(k => cellVal.includes(k.toLowerCase()))) {
-                                // Strategy 1: Look at the cell to the RIGHT (c + 1)
-                                const valRight = row[c + 1];
-                                if (valRight !== undefined && valRight !== null && String(valRight).trim() !== '') {
-                                    return String(valRight).trim();
-                                }
-                                // Strategy 2: Look at the cell BELOW (r + 1)
-                                if (rawData[r + 1] && rawData[r + 1][c]) {
-                                    const valBelow = rawData[r + 1][c];
-                                    if (valBelow !== undefined && valBelow !== null && String(valBelow).trim() !== '') {
-                                        return String(valBelow).trim();
-                                    }
-                                }
+                                return String(row[c + 1] || rawData[r + 1]?.[c] || '').trim();
                             }
                         }
                     }
                     return '';
                 };
 
-                // 1. Extract General Project Info
                 const pName = findValue(['Project Name', 'Projekt Name', 'Project']);
                 const epc = findValue(['EPC', 'EPC Number', 'EPC Nummer']);
                 const cust = findValue(['Customer', 'Kunde']);
@@ -127,23 +128,20 @@ export class NewBspaComponent implements OnInit {
                 if (epc) this.dataService.projectData.epcNumber = epc;
                 if (cust) this.dataService.projectData.customer = cust;
 
-                // 2. Extract Technical Parameters (Loop through defined groups)
-                this.dataService.parameterGroups.forEach(group => {
-                    group.parameters.forEach(param => {
-                        // Search by fuzzy name or precise ID
-                        const foundVal = findValue([param.name, param.id]);
-                        if (foundVal) {
-                            console.log(`Mapped Parameter: ${param.name} -> ${foundVal}`);
-                            // Update the first variant with this value
-                            if (this.dataService.variants.length > 0) {
-                                this.dataService.variants[0].values[param.id] = foundVal;
-                            }
-                        }
+                // 3. Extract Technical Parameters (Now using the NEW discovered structure)
+                const results = extractor.extractAllParameters(this.dataService.parameterGroups);
+                console.log(`Extracted ${results.length} parameters.`);
+
+                if (this.dataService.variants.length > 0) {
+                    const variant = this.dataService.variants[0];
+                    // Clear previous values just in case
+                    variant.values = {};
+                    results.forEach(res => {
+                        variant.values[res.paramId] = res.foundValue;
                     });
-                });
+                }
 
                 console.log('Data Parsing Complete. Navigating to Sheet.');
-                this.router.navigate(['/sheet']);
 
             } catch (err) {
                 console.error('Error parsing Excel file:', err);
