@@ -51,7 +51,7 @@ export class NewBspaComponent implements OnInit {
     uploadFile() {
         this.fileInputRef?.nativeElement.click();
     }
-
+    
     /**
      * Main Handler for Excel Uploads.
      * Reads .xlsx/.xlsm files, parses them, and maps data to DataService.
@@ -97,6 +97,10 @@ export class NewBspaComponent implements OnInit {
                 // ===================================
                 const extractor = new ExcelExtractor(rawData);
 
+// ✅ HIER ist richtig:
+this.dataService.projectDescription = extractor.extractProjectDescription();
+
+// danach normal weiter:
                 // 1. Parse matrix structure (variants as columns, parameters as rows)
                 console.log('Parsing matrix structure from Excel...');
                 const parsed = extractor.parseMatrixFromSheet();
@@ -169,7 +173,7 @@ export class NewBspaComponent implements OnInit {
         fileReader.readAsArrayBuffer(file);
         input.value = '';
     }
-
+    
     goToSheet() {
         this.router.navigate(['/sheet']);
     }

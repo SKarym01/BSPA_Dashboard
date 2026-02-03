@@ -1,4 +1,12 @@
 import { Injectable } from '@angular/core';
+export interface ProjectDescriptionItem {
+  key: string;
+  value: string;
+
+}
+
+
+
 
 /**
  * Represents a single product variant (e.g., Variant A, Variant B).
@@ -19,7 +27,8 @@ export interface ParameterRow {
     name: string;
     unit?: string;
     userComment?: string;
-    checkStatus?: CheckStatus;
+    checkStatus?: string;
+
     type: 'text' | 'number' | 'select' | 'curve';
     options?: string[]; // For 'select' type
     defaultValue?: any; // Optional prefilled value from imports
@@ -66,6 +75,7 @@ export class DataService {
         internalNotes: '',
         epcNumber: ''
     };
+      projectDescription: ProjectDescriptionItem[] = [];
 
     /** Available customers for dropdowns */
     customers: string[] = [

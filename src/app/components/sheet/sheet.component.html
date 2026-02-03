@@ -48,6 +48,28 @@
                     </span>
                 </div>
             </div>
+            <!-- Project Description -->
+<div *ngIf="dataService.projectDescription?.length"
+     class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+
+  <div class="px-4 py-3 border-b border-slate-200 bg-slate-50">
+    <h3 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+      Project Description
+    </h3>
+  </div>
+
+  <div class="divide-y divide-slate-100">
+    <div *ngFor="let item of dataService.projectDescription"
+         class="grid grid-cols-[320px_1fr] gap-3 px-4 py-3">
+      <div class="text-sm font-semibold text-slate-700">
+        {{ item.key }}
+      </div>
+      <div class="text-sm text-slate-700">
+        {{ item.value || '—' }}
+      </div>
+    </div>
+  </div>
+</div>
 
             <!-- 2) PARAMETER GROUPS -->
             <ng-container *ngFor="let group of dataService.parameterGroups; let gi = index">
@@ -60,14 +82,16 @@
                         <h3 class="text-lg font-bold text-slate-700">{{ group.groupName }}</h3>
                     </div>
 
-                    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
+                    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto relative">
+                        
                         <!-- Header -->
                         <div class="flex min-w-max border-b border-slate-200 bg-slate-50">
 
-                            <div
-                                class="w-80 p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200">
-                                Parameter
-                            </div>
+                           <div
+  class="w-80 p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200
+         sticky left-0 z-30 bg-slate-50 shadow-[2px_0_0_0_rgba(226,232,240,1)]">
+  Parameter
+</div>
 
                             <div
                                 class="w-24 p-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-r border-slate-200 text-center">
@@ -90,23 +114,23 @@
                                     class="w-40 p-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider"
                                     [class.border-r]="vi !== dataService.variants.length - 1"
                                     [class.border-slate-200]="vi !== dataService.variants.length - 1">
-                                    {{ v.name }}
+                                    {{ v.name || ('Variant ' + (vi + 1)) }}
                                 </div>
                             </div>
 
-                            <!-- Variants dynamic -->
-
                         </div>
 
-                        <!-- Rows -->
                         <!-- Rows -->
                         <div *ngFor="let param of group.parameters"
                             class="flex min-w-max border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
 
                             <!-- 1) Parameter Name -->
-                            <div class="w-80 p-3 border-r border-slate-200 flex items-center">
-                                <span class="text-sm font-semibold text-slate-700">{{ param.name }}</span>
-                            </div>
+                            <div
+  class="w-80 p-3 border-r border-slate-200 flex items-center
+         sticky left-0 z-20 bg-white shadow-[2px_0_0_0_rgba(226,232,240,1)]">
+  <span class="text-sm font-semibold text-slate-700">{{ param.name }}</span>
+</div>
+
 
                             <!-- 2) Unit -->
                             <div class="w-24 p-3 border-r border-slate-200 flex items-center justify-center">
@@ -116,20 +140,19 @@
                             </div>
 
                             <!-- 3) Parameter Check -->
-                            <div class="w-32 p-2 border-r border-slate-200 flex items-center justify-center">
-                                <select [(ngModel)]="param.checkStatus" class="w-full px-2 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none
-           focus:ring-2 focus:ring-blue-200">
-                                    <option value="">—</option>
-                                    <option value="ok">OK</option>
-                                    <option value="nok">NOK</option>
-                                    <option value="na">N/A</option>
-                                </select>
-                            </div>
+                            <div class="w-32 p-1 border-r border-slate-200">
+  <input type="text" [(ngModel)]="param.checkStatus"
+    class="w-full h-full px-3 py-2 bg-transparent outline-none text-sm
+           focus:bg-white focus:ring-2 focus:ring-blue-100 rounded transition-all"
+    />
+</div>
+
 
                             <!-- 4) Comments -->
                             <div class="w-72 p-1 border-r border-slate-200">
-                                <input type="text" [(ngModel)]="param.userComment" class="w-full h-full px-3 py-2 bg-transparent outline-none text-sm
-           focus:bg-white focus:ring-2 focus:ring-blue-100 rounded transition-all" placeholder="Add comment..." />
+                                <input type="text" [(ngModel)]="param.userComment"
+                                    class="w-full h-full px-3 py-2 bg-transparent outline-none text-sm focus:bg-white focus:ring-2 focus:ring-blue-100 rounded transition-all"
+                                    placeholder="Add comment..." />
                             </div>
 
                             <!-- 5) Values per Variant -->
