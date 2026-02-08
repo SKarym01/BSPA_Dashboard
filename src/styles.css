@@ -3,8 +3,71 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    /* Premium Palette - Light Mode Centric */
+    --color-bg-primary: #f8fafc;
+    /* Slate 50 */
+    --color-bg-secondary: #ffffff;
+    --color-bg-tertiary: #f1f5f9;
+    /* Slate 100 */
+
+    --color-accent-primary: #2563eb;
+    /* Blue 600 */
+    --color-accent-secondary: #0891b2;
+    /* Cyan 600 */
+    --color-accent-glow: rgba(37, 99, 235, 0.2);
+
+    --color-text-primary: #0f172a;
+    /* Slate 900 */
+    --color-text-secondary: #475569;
+    /* Slate 600 */
+    --color-text-muted: #94a3b8;
+    /* Slate 400 */
+
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+
+    /* Glassmorphism tuned for Light Mode */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+}
+
+/* Modern Card / Panel Styles */
+.modern-panel {
+    background: var(--color-bg-secondary);
+    border: 1px solid #e2e8f0;
+    /* Slate 200 */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    border-radius: 1rem;
+    transition: all 0.3s ease;
+}
+
+.modern-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.modern-card:hover {
+    border-color: var(--color-accent-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+}
+
+/* Animations */
 .animate-fade-in {
-    animation: fadeIn 0.4s ease-out forwards;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 .animate-slide-up {
@@ -24,7 +87,7 @@
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(15px);
     }
 
     to {
@@ -33,28 +96,21 @@
     }
 }
 
-/* NEW: Logo Animations */
-/* Simulates a rotating part (like a disc/gear) */
-.animate-brake-rotate {
-    animation: brakeRotate 10s linear infinite;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-@keyframes brakeRotate {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
+::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
 }
 
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }

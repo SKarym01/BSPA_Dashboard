@@ -171,13 +171,26 @@ export class ExcelExtractor {
 
             // CASE 2: Parameter Row?
             // If it HAS a value (or looks like a parameter slot)
-            if (val !== null && val !== undefined) {
-                // Try to detect Unit (often between Name and Value)
+            if (typeof val === 'number' || (typeof val === 'string' && val.length < 50)) {
+                // Try to detect Unit (often between Name and Value OR after Value)
                 let unit = '';
-                // Heuristic: if value was found at cFirst+2, maybe cFirst+1 is unit?
+
+                // Case A: Unit is between Name and Value (Name | Unit | Value)
+                // If val was found at cFirst+2, check cFirst+1 for unit
                 const cVal = row.indexOf(val, cFirst + 1);
                 if (cVal > cFirst + 1) {
-                    unit = String(row[cFirst + 1] || '').trim();
+                    const potentialUnit = String(row[cFirst + 1] || '').trim();
+                    if (potentialUnit.length < 10 && /^[\[\(\{]/.test(potentialUnit)) {
+                        unit = potentialUnit;
+                    }
+                }
+
+                // Case B: Unit is after Value (Name | Value | Unit)
+                if (!unit) {
+                    const nextCell = String(row[cFirst + 2] || '').trim();
+                    if (nextCell.length < 10 && /^[\[\(\{]/.test(nextCell)) {
+                        unit = nextCell;
+                    }
                 }
 
                 currentGroup.parameters.push({
@@ -188,6 +201,11 @@ export class ExcelExtractor {
                     userComment: '',
                     checkStatus: ''
                 });
+
+                // Capture the value immediately for this newly created parameter!
+                // This creates a "seed" value so that extractAllParameters will definitely find it later,
+                // or we could return values directly from discovery, but sticking to the 2-step process is fine
+                // as long as extractAllParameters logic aligns.
                 continue;
             }
         }

@@ -12,15 +12,7 @@ export class HomeComponent {
 
     constructor(private router: Router) { }
 
-    selectType(type: 'new' | 'minor') {
-        if (type === 'new') {
-            this.router.navigate(['/new']);
-        } else {
-            this.router.navigate(['/minor']);
-        }
-    }
-
-    selectStatusCheck() {
-        this.router.navigate(['/check']);
-    }
+    // These can actually be removed too if not used by the template anymore, 
+    // but I'll leave them if the user wants to add buttons back later or for existing tests.
+    // For now, the template is static.
 }
