@@ -9,8 +9,7 @@ export type WorkflowStep = 'CUSTOMER_DATA' | 'RB_DATA' | 'INPUT_SHEET' | 'P_TRIG
 
 export interface ParameterValue {
     value: any;
-    trustLevel: 1 | 2 | 3 | 4 | 5; // 1 = Low Trust, 5 = High Trust (Enc/RB data)
-    source: 'Manual' | 'Input Sheet' | 'Estimated' | 'Mamba';
+    source: 'Manual' | 'Input Sheet' | 'Estimated' | 'Mamba' | 'Default';
     isMissing?: boolean; // Flag for missing simulation-critical values
 }
 
@@ -26,6 +25,16 @@ export interface ProductVariant {
 
 export type CheckStatus = 'check' | '';
 
+export type MandatoryStatus = 'mandatory' | 'semi-mandatory' | 'optional';
+
+export interface DraftProject {
+    id: string;
+    name: string;
+    epc: string;
+    lastModified: Date;
+    status: 'Draft' | 'Running' | 'Completed';
+}
+
 /**
  * Represents a single row in the parameter sheet.
  */
@@ -37,8 +46,9 @@ export interface ParameterRow {
     checkStatus?: CheckStatus;
     type: 'text' | 'number' | 'select' | 'curve';
     options?: string[]; // For 'select' type
-    isSimulationRelevant?: boolean; // Critical for MAMBA simulation (highlight red if missing)
+    mandatoryStatus: MandatoryStatus; // New status field
     defaultValue?: any; // For MAMBA eval default
+    isSimulationRelevant?: boolean; // Keep for backward compatibility if needed, or derived from mandatoryStatus
 }
 
 /**
@@ -105,31 +115,37 @@ export class DataService {
     };
 
     // =========================
+    // STATE: DRAFTS
+    // =========================
+    drafts: DraftProject[] = [
+        { id: 'd1', name: 'Project Alpha', epc: 'EPC-123', lastModified: new Date(), status: 'Draft' },
+        { id: 'd2', name: 'Brake System X', epc: 'EPC-456', lastModified: new Date(Date.now() - 86400000), status: 'Running' }
+    ];
+
+    // =========================
     // CONFIG: PARAMETER DEFINITIONS
     // =========================
-    // This defines the structure of the main sheet.
-    // In a real app, this might come from an API or config file.
     parameterGroups: ParameterGroup[] = [
         {
             groupName: '1. Vehicle Parameters',
             parameters: [
-                { id: 'p1_1', name: 'Voltage Supply for Modulation', unit: '[[V]]', type: 'number', userComment: '', isSimulationRelevant: true },
-                { id: 'p1_2', name: 'Voltage Supply for Actuation', unit: '[V]', type: 'number', userComment: '', isSimulationRelevant: true },
-                { id: 'p1_3', name: 'Power Supply redundancy Act / Mod', unit: '[-]', type: 'number', userComment: '' }
+                { id: 'p1_1', name: 'Voltage Supply for Modulation', unit: '[[V]]', type: 'number', userComment: '', mandatoryStatus: 'mandatory', isSimulationRelevant: true },
+                { id: 'p1_2', name: 'Voltage Supply for Actuation', unit: '[V]', type: 'number', userComment: '', mandatoryStatus: 'semi-mandatory', isSimulationRelevant: true, defaultValue: 12.0 },
+                { id: 'p1_3', name: 'Power Supply redundancy Act / Mod', unit: '[-]', type: 'number', userComment: '', mandatoryStatus: 'optional' }
             ]
         },
         {
             groupName: '2. Mastercylinder',
             parameters: [
-                { id: 'p2_1', name: 'TMC', unit: '', type: 'text', userComment: '' }, // Often manually filled
-                { id: 'p2_2', name: 'MC1', unit: 'inch', type: 'number', userComment: '', isSimulationRelevant: true },
-                { id: 'p2_3', name: 'MC2', unit: '', type: 'number', userComment: '' }
+                { id: 'p2_1', name: 'TMC', unit: '', type: 'text', userComment: '', mandatoryStatus: 'mandatory' },
+                { id: 'p2_2', name: 'MC1', unit: 'inch', type: 'number', userComment: '', mandatoryStatus: 'mandatory', isSimulationRelevant: true },
+                { id: 'p2_3', name: 'MC2', unit: '', type: 'number', userComment: '', mandatoryStatus: 'optional' }
             ]
         },
         {
             groupName: '3. Brake pedal',
             parameters: [
-                { id: 'p3_1', name: 'Pedal ratio', unit: '', type: 'text', userComment: '' },
+                { id: 'p3_1', name: 'Pedal ratio', unit: '', type: 'text', userComment: '', mandatoryStatus: 'semi-mandatory', defaultValue: '3.5' },
             ]
         }
     ];
@@ -140,7 +156,6 @@ export class DataService {
     // Holds the actual data values for each column/variant
     variants: ProductVariant[] = [
         { id: 'v1', name: 'Variant A', values: {} },
-        // { id: 'v2', name: 'Variant B', values: {} } // Start with 1 variant
     ];
 
     constructor() { }
@@ -168,17 +183,13 @@ export class DataService {
     /**
      * Helper to set a parameter value with metadata
      */
-    /**
-     * Helper to set a parameter value with metadata
-     */
-    setParameterValue(variantId: string, paramId: string, value: any, source: 'Manual' | 'Input Sheet' | 'Estimated', trustLevel: 1 | 2 | 3 | 4 | 5) {
+    setParameterValue(variantId: string, paramId: string, value: any, source: 'Manual' | 'Input Sheet' | 'Estimated') {
         const variant = this.variants.find(v => v.id === variantId);
         if (variant) {
             const isMissing = value === '' || value === null || value === undefined;
             variant.values[paramId] = {
                 value: value,
                 source: source,
-                trustLevel: trustLevel,
                 isMissing: isMissing
             };
         }
@@ -208,7 +219,6 @@ export class DataService {
                             variant.values[param.id] = {
                                 value: estimatedVal,
                                 source: 'Estimated',
-                                trustLevel: 2, // Low trust for Estimated
                                 isMissing: false
                             };
                         }
@@ -227,15 +237,13 @@ export class DataService {
         this.variants.forEach(variant => {
             this.parameterGroups.forEach(group => {
                 group.parameters.forEach(param => {
-                    // Check if critical
-                    if (param.isSimulationRelevant) {
+                    // Check if mandatory
+                    if (param.mandatoryStatus === 'mandatory') {
                         const val = variant.values[param.id];
                         if (!val || val.value === '' || val.value === undefined) {
                             isValid = false;
-                            // Mark as missing in state if needed, or just return check
-                            // Ideally, update the value object to reflect "missing" state for UI
                             if (!variant.values[param.id]) {
-                                variant.values[param.id] = { value: '', source: 'Manual', trustLevel: 1, isMissing: true };
+                                variant.values[param.id] = { value: '', source: 'Manual', isMissing: true };
                             } else {
                                 variant.values[param.id].isMissing = true;
                             }
@@ -245,5 +253,29 @@ export class DataService {
             });
         });
         return isValid;
+    }
+
+    /**
+     * Returns mock reference data for an EPC number.
+     * In a real app, this would fetch from a database.
+     */
+    getMockEpcData(epc: string): { [paramId: string]: any } {
+        const mockData: { [paramId: string]: any } = {};
+
+        // Generate some mock values based on the EPC hash or just random
+        // We ensure some match and some don't for demonstration
+        this.parameterGroups.forEach(group => {
+            group.parameters.forEach(param => {
+                // Default: match the "Input Sheet" logic (randomly)
+                // For demo: 
+                if (param.type === 'number') mockData[param.id] = 12.5; // Fixed mock val
+                else mockData[param.id] = 'Bosch Ref';
+            });
+        });
+
+        // Introduce specific known deviations for demo
+        mockData['p1_1'] = 13.5; // Example mismatch
+
+        return mockData;
     }
 }

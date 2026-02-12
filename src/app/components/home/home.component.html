@@ -11,7 +11,7 @@
     </div>
 
     <!-- Quick Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
 
         <!-- Active Projects -->
         <div class="modern-card p-6 flex flex-col justify-between h-32 hover:border-blue-400 cursor-default">
@@ -24,13 +24,13 @@
                     </svg>
                 </div>
             </div>
-            <div class="text-3xl font-bold text-slate-800">12</div>
+            <div class="text-3xl font-bold text-slate-800">{{ dataService.drafts.length }}</div>
         </div>
 
         <!-- Pending Validations -->
         <div class="modern-card p-6 flex flex-col justify-between h-32 hover:border-yellow-400 cursor-default">
             <div class="flex justify-between items-start">
-                <span class="text-slate-500 font-medium text-sm uppercase">Pending Validation</span>
+                <span class="text-slate-500 font-medium text-sm uppercase">Running Simulations</span>
                 <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -40,62 +40,53 @@
                     </svg>
                 </div>
             </div>
-            <div class="text-3xl font-bold text-slate-800">3</div>
-        </div>
-
-        <!-- Avg Trust Score -->
-        <div class="modern-card p-6 flex flex-col justify-between h-32 hover:border-emerald-400 cursor-default">
-            <div class="flex justify-between items-start">
-                <span class="text-slate-500 font-medium text-sm uppercase">Avg. Trust Score</span>
-                <div class="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    </svg>
-                </div>
+            <div class="text-3xl font-bold text-slate-800">
+                {{ runningDraftsCount }}
             </div>
-            <div class="text-3xl font-bold text-slate-800">92%</div>
         </div>
 
     </div>
 
-    <!-- Recent Activity Table (Mock) -->
+    <!-- Recent Activity Table (Dynamic) -->
     <div class="modern-panel bg-white overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-200">
-            <h3 class="font-bold text-slate-700">Recent Validations</h3>
+            <h3 class="font-bold text-slate-700">Recent Projects</h3>
         </div>
         <table class="w-full text-left text-sm">
-            <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold">
+            <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold border-b border-slate-200">
                 <tr>
-                    <th class="px-6 py-3">Project Name</th>
+                    <th class="px-6 py-3">Project / EPC</th>
                     <th class="px-6 py-3">Status</th>
-                    <th class="px-6 py-3">Last Updated</th>
-                    <th class="px-6 py-3">Trust Level</th>
+                    <th class="px-6 py-3">Last Modified</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-                <tr class="hover:bg-slate-50/50 transition-colors">
-                    <td class="px-6 py-4 font-medium text-slate-800">ESP_Gen93_Variant_A</td>
-                    <td class="px-6 py-4"><span
-                            class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">Completed</span>
+
+                <ng-container *ngFor="let draft of dataService.drafts">
+                    <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer bg-white">
+                        <td class="px-6 py-4 font-medium text-slate-800">
+                            <div class="flex flex-col">
+                                <span>{{ draft.name }}</span>
+                                <span class="text-xs text-slate-400 font-mono">{{ draft.epc }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wide border"
+                                [ngClass]="{
+                                    'bg-slate-100 text-slate-600 border-slate-200': draft.status === 'Draft',
+                                    'bg-blue-100 text-blue-600 border-blue-200 animate-pulse': draft.status === 'Running',
+                                    'bg-emerald-100 text-emerald-600 border-emerald-200': draft.status === 'Completed'
+                                }">
+                                {{ draft.status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-slate-500">{{ draft.lastModified | date:'short' }}</td>
+                    </tr>
+                </ng-container>
+                <tr *ngIf="dataService.drafts.length === 0">
+                    <td colspan="3" class="px-6 py-8 text-center text-slate-400 italic">
+                        No recent projects found. Start a new BSPA to get started.
                     </td>
-                    <td class="px-6 py-4 text-slate-500">2 hours ago</td>
-                    <td class="px-6 py-4">High (98%)</td>
-                </tr>
-                <tr class="hover:bg-slate-50/50 transition-colors">
-                    <td class="px-6 py-4 font-medium text-slate-800">IPB_Next_Generation</td>
-                    <td class="px-6 py-4"><span
-                            class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-bold">In
-                            Progress</span></td>
-                    <td class="px-6 py-4 text-slate-500">Yesterday</td>
-                    <td class="px-6 py-4">Medium (75%)</td>
-                </tr>
-                <tr class="hover:bg-slate-50/50 transition-colors">
-                    <td class="px-6 py-4 font-medium text-slate-800">Legacy_Brake_System</td>
-                    <td class="px-6 py-4"><span
-                            class="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">New</span></td>
-                    <td class="px-6 py-4 text-slate-500">3 days ago</td>
-                    <td class="px-6 py-4">-</td>
                 </tr>
             </tbody>
         </table>

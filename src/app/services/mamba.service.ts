@@ -28,13 +28,6 @@ export class MambaService {
      */
     runSimulation(variant: ProductVariant): Observable<MambaResult> {
         console.log(`[MAMBA] Sending Variant: ${variant.name} to Simulation Engine...`);
-        console.log(`[MAMBA] Inspecting Trust Levels...`);
-
-        // Check if any critical params are missing trust
-        const lowTrustParams = Object.values(variant.values).filter(v => v.trustLevel < 3);
-        if (lowTrustParams.length > 5) {
-            console.warn(`[MAMBA] Warning: multiple low-trust parameters detected.`);
-        }
 
         // Simulate Network Delay
         return of(this.mockMambaLogic(variant)).pipe(
@@ -50,15 +43,8 @@ export class MambaService {
     }
 
     private mockMambaLogic(variant: ProductVariant): MambaResult {
-        // Randomly simulate failure based on "missing data" logic from DataService?
-        // Actually, let's make it deterministic: if "Project Name" contains "FAIL", fail it.
-        // Or if trust levels are terrible.
-
-        const trustSum = Object.values(variant.values).reduce((acc, val) => acc + (val.trustLevel || 0), 0);
-        const count = Object.values(variant.values).length || 1;
-        const avgTrust = trustSum / count;
-
-        const isSuccess = Math.random() > 0.2; // 80% chance of success generally
+        // Randomly simulate success/failure
+        const isSuccess = Math.random() > 0.1; // 90% chance of success generally
 
         if (!isSuccess) {
             return {
@@ -70,13 +56,18 @@ export class MambaService {
             };
         }
 
+        // Calculate a mock score based on data completeness
+        const filledParams = Object.values(variant.values).filter(v => !v.isMissing).length;
+        const totalParams = Object.keys(variant.values).length || 1;
+        const completeness = (filledParams / totalParams) * 100;
+
         return {
             success: true,
             simulationId: 'SIM-' + Math.floor(Math.random() * 99999),
             timestamp: new Date(),
-            warnings: avgTrust < 3 ? ['Low trust input data - verify results manually'] : [],
+            warnings: [],
             metrics: {
-                trustScore: Math.round(avgTrust * 20), // Convert 5-scale to 100
+                trustScore: Math.round(completeness), // Use completeness as "Trust Score" mock
                 performanceIndex: 95
             },
             reportUrl: 'http://mock-mamba-report.pdf'

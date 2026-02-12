@@ -6,126 +6,95 @@ import { DataService, ParameterValue, WorkflowStep } from '../../services/data.s
 import { MambaService, MambaResult } from '../../services/mamba.service';
 import { read, utils } from 'xlsx';
 import { ExcelExtractor } from '../../utils/excel-extractor';
-import { TrustIndicatorComponent } from '../shared/trust-indicator/trust-indicator.component'; // Import Trust Component
+
 
 @Component({
-    selector: 'app-new-bspa',
     standalone: true,
-    imports: [CommonModule, FormsModule, TrustIndicatorComponent], // Add TrustIndicator
+    imports: [CommonModule, FormsModule],
     templateUrl: './new-bspa.component.html',
 })
 export class NewBspaComponent implements OnInit {
 
     // Workflow State
     currentStep: WorkflowStep = 'CUSTOMER_DATA';
-    workflowSteps: WorkflowStep[] = ['CUSTOMER_DATA', 'RB_DATA', 'INPUT_SHEET', 'MAMBA', 'RESULTS'];
+    workflowSteps: WorkflowStep[] = ['CUSTOMER_DATA', 'INPUT_SHEET', 'MAMBA', 'RESULTS'];
 
     // UI State
-    level: 1 | 2 = 1; // Level 1 (Review/Buttons) | Level 2 (Edit/Tech)
-    showEpcError = false;
+    epcNumber: string = '';
     isSimulating = false;
     simulationResult: MambaResult | null = null;
-
-    // Form Data
-    bspaType: 'new' | 'minor' | null = null;
+    epcValues: { [paramId: string]: any } = {};
 
     @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
 
     constructor(
         public dataService: DataService,
-        private mambaService: MambaService, // Inject Mamba
+        private mambaService: MambaService,
         private route: ActivatedRoute,
         private router: Router
     ) { }
 
     ngOnInit(): void {
-        this.route.data.subscribe(data => {
-            this.bspaType = data['type'];
-        });
-
-        // Listen to global workflow state
         this.dataService.currentWorkflowStep$.subscribe(step => {
             this.currentStep = step;
+            // Load EPC data when entering validation step if EPC exists
+            if (step === 'INPUT_SHEET' && this.epcNumber) {
+                this.loadEpcData();
+            }
         });
 
-        // Ensure we start fresh
-        // this.dataService.resetProjectData(); // Or maybe keep if navigating back?
+        // Initialize state if needed
+        if (this.dataService.variants.length === 0) {
+            this.dataService.variants = [{ id: 'v1', name: 'Variant A', values: {} }];
+        }
+
+        // Load EPC from service if restarting
+        this.epcNumber = this.dataService.projectData.epcNumber || '';
+        if (this.epcNumber && this.currentStep === 'INPUT_SHEET') {
+            this.loadEpcData();
+        }
     }
 
-    // ==========================================
-    // WORKFLOW NAVIGATION
-    // ==========================================
+    setStep(step: WorkflowStep) {
+        // Sync epcNumber to service before moving, just in case
+        if (this.epcNumber) this.dataService.projectData.epcNumber = this.epcNumber;
+        this.dataService.updateWorkflowStep(step);
+    }
+
+    loadEpcData() {
+        if (!this.epcNumber) return;
+        this.epcValues = this.dataService.getMockEpcData(this.epcNumber);
+    }
+
+    isEpcMismatch(paramId: string): boolean {
+        // If no EPC or no EPC value for this param, no mismatch can be determined
+        if (!this.epcNumber || this.epcValues[paramId] === undefined) return false;
+
+        const currentVal = this.dataService.variants[0].values[paramId]?.value;
+        const epcVal = this.epcValues[paramId];
+
+        // Match check (loose equality)
+        return String(currentVal || '').trim() !== String(epcVal).trim();
+    }
+
+    goToHome() {
+        this.router.navigate(['/']);
+    }
 
     nextStep() {
-        const idx = this.workflowSteps.indexOf(this.currentStep);
-        if (idx < this.workflowSteps.length - 1) {
-            this.currentStep = this.workflowSteps[idx + 1];
-            this.dataService.updateWorkflowStep(this.currentStep);
-
-            // Auto-trigger logic for certain steps?
-            if (this.currentStep === 'INPUT_SHEET') {
-                // Check if we have missing values to highlight
-                this.checkMissingValues();
-            }
+        // Simple manual transition for "Skip Upload"
+        if (this.currentStep === 'CUSTOMER_DATA') {
+            this.setStep('INPUT_SHEET');
         }
     }
-
-    prevStep() {
-        const idx = this.workflowSteps.indexOf(this.currentStep);
-        if (idx > 0) {
-            this.currentStep = this.workflowSteps[idx - 1];
-            this.dataService.updateWorkflowStep(this.currentStep);
-        }
-    }
-
-    setLevel(lvl: 1 | 2) {
-        this.level = lvl;
-    }
-
-    // ==========================================
-    // ACTION HANDLER (LEVEL 1 ACTIONS)
-    // ==========================================
 
     /**
-     * Level 1: "Only Buttons".
-     * Triggers high-level actions without exposing detailed params.
+     * Checks if a parameter is missing based on ID
      */
-    runAutoCheck() {
-        this.checkMissingValues();
-        alert('Data Completeness Check: 95% - Ready for Review');
-    }
-
-    runAIEstimation() {
-        this.dataService.estimateMissingValues();
-        alert('AI Estimation Complete. Filled missing values with Trust Level 2 (Low).');
-    }
-
-
-
-    // ==========================================
-    // DATA HANDLING
-    // ==========================================
-
-    /**
-     * Updates the trust level for a specific parameter.
-     * Ensures type safety for the 1-5 level range.
-     */
-    updateTrustLevel(paramId: string, level: number) {
-        // Cast the number to the specific union type (1|2|3|4|5)
-        const safeLevel = Math.max(1, Math.min(5, level)) as 1 | 2 | 3 | 4 | 5;
-
-        // Assume working on the first variant for now
-        if (this.dataService.variants.length === 0) return;
-        const variantId = this.dataService.variants[0].id;
-
-        // Use DataService to update or initialize the value struct
-        const existing = this.dataService.variants[0].values[paramId];
-        if (existing) {
-            existing.trustLevel = safeLevel;
-        } else {
-            // Initialize if missing (e.g. manual entry started)
-            this.dataService.setParameterValue(variantId, paramId, '', 'Manual', safeLevel);
-        }
+    isMissing(paramId: string): boolean {
+        if (this.dataService.variants.length === 0) return true;
+        const val = this.dataService.variants[0].values[paramId];
+        return !val || val.value === '' || val.value === undefined || val.value === null;
     }
 
     /**
@@ -139,18 +108,75 @@ export class NewBspaComponent implements OnInit {
 
         if (existing) {
             existing.value = newValue;
+            existing.isMissing = newValue === '' || newValue === null || newValue === undefined;
+            if (!existing.isMissing) existing.source = 'Manual';
         } else {
-            // Initialize with default trust 1 (Manual)
-            this.dataService.setParameterValue(variantId, paramId, newValue, 'Manual', 1);
+            // Initialize with Manual source
+            this.dataService.setParameterValue(variantId, paramId, newValue, 'Manual');
         }
     }
 
-    checkMissingValues() {
-        // Validation logic
-        const isValid = this.dataService.validateForMamba();
-        if (!isValid) {
-            console.warn("Validation Failed: Missing Critical Parameters");
+    autofillDefaults() {
+        this.dataService.parameterGroups.forEach(group => {
+            group.parameters.forEach(param => {
+                if (this.isMissing(param.id) && param.defaultValue !== undefined) {
+                    this.updateParamValue(param.id, param.defaultValue);
+                    // Override source to 'Default'
+                    const val = this.dataService.variants[0].values[param.id];
+                    if (val) val.source = 'Default';
+                }
+            });
+        });
+    }
+
+    runAiEstimation() {
+        this.dataService.estimateMissingValues();
+    }
+
+    saveAsDraft() {
+        // Save to Drafts
+        const newDraft: any = {
+            id: 'd-' + Date.now(),
+            name: this.epcNumber ? `EPC: ${this.epcNumber}` : 'Untitled Project',
+            epc: this.epcNumber || 'N/A',
+            lastModified: new Date(),
+            status: 'Draft'
+        };
+
+        // In a real app, this would be a proper service method
+        this.dataService.drafts.unshift(newDraft);
+        this.dataService.resetProjectData(); // Clear current
+        this.router.navigate(['/']); // Go Home
+    }
+
+    startBspa() {
+        // 1. Check Mandatory Fields
+        const missingMandatory = this.dataService.parameterGroups.some(group =>
+            group.parameters.some(p => p.mandatoryStatus === 'mandatory' && this.isMissing(p.id))
+        );
+
+        if (missingMandatory) {
+            alert('Please fill in all MANDATORY (Red) fields before starting BSPA.');
+            return;
         }
+
+        // 3. Update Service State
+        this.dataService.projectData.epcNumber = this.epcNumber;
+
+        // 4. Start Simulation
+        this.setStep('MAMBA');
+        this.isSimulating = true;
+
+        // Mock Mamba Run
+        this.mambaService.runSimulation(this.dataService.variants[0]).subscribe(result => {
+            this.isSimulating = false;
+            this.simulationResult = result;
+
+            // Auto finish
+            setTimeout(() => {
+                this.setStep('RESULTS');
+            }, 1000);
+        });
     }
 
     uploadFile() {
@@ -162,7 +188,6 @@ export class NewBspaComponent implements OnInit {
         if (!input.files || input.files.length === 0) return;
 
         const file = input.files[0];
-        // ... (Existing Excel Logic - kept mostly same but updated to set Trust Levels) ...
         const fileReader = new FileReader();
         fileReader.onload = (e) => {
             try {
@@ -175,15 +200,15 @@ export class NewBspaComponent implements OnInit {
                 const results = extractor.extractAllParameters(this.dataService.parameterGroups);
 
                 if (this.dataService.variants.length > 0) {
-                    const variantId = this.dataService.variants[0].id; // Default to first variant
+                    const variantId = this.dataService.variants[0].id;
                     results.forEach(res => {
-                        this.dataService.setParameterValue(variantId, res.paramId, res.foundValue, 'Input Sheet', 5);
+                        this.dataService.setParameterValue(variantId, res.paramId, res.foundValue, 'Input Sheet');
                     });
                 }
 
                 // Move to next step if currently on Upload step
                 if (this.currentStep === 'CUSTOMER_DATA') {
-                    this.nextStep();
+                    this.setStep('INPUT_SHEET');
                 }
 
             } catch (err) {
@@ -193,40 +218,5 @@ export class NewBspaComponent implements OnInit {
         };
         fileReader.readAsArrayBuffer(file);
         input.value = '';
-    }
-
-    // ==========================================
-    // SIMULATION (MAMBA)
-    // ==========================================
-
-    runMambaSimulation() {
-        if (!this.dataService.validateForMamba()) {
-            alert('Cannot run Simulation! Critical parameters are missing (Marked in Red). Please fill them or use AI Estimation.');
-            return;
-        }
-
-        this.isSimulating = true;
-        this.simulationResult = null;
-
-        // Use first variant for simulation
-        const variant = this.dataService.variants[0];
-
-        this.mambaService.runSimulation(variant).subscribe({
-            next: (result) => {
-                this.isSimulating = false;
-                this.simulationResult = result;
-                if (result.success) {
-                    this.currentStep = 'RESULTS'; // Jump to results
-                }
-            },
-            error: (err) => {
-                this.isSimulating = false;
-                alert('MAMBA Connection Failed: ' + err.message);
-            }
-        });
-    }
-
-    goToHome() {
-        this.router.navigate(['/home']);
     }
 }

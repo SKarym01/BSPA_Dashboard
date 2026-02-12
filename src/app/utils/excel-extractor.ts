@@ -199,7 +199,8 @@ export class ExcelExtractor {
                     unit: unit,
                     type: typeof val === 'number' ? 'number' : 'text',
                     userComment: '',
-                    checkStatus: ''
+                    checkStatus: '',
+                    mandatoryStatus: 'optional' // Default to optional for discovered params
                 });
 
                 // Capture the value immediately for this newly created parameter!
