@@ -10,11 +10,17 @@
             <div class="flex flex-col items-center gap-2 bg-slate-50 px-2 z-10 cursor-pointer group"
                 (click)="setStep('CUSTOMER_DATA')">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-bold text-sm shadow-sm"
-                    [ngClass]="currentStep === 'CUSTOMER_DATA' ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400'">
-                    1
+                    [ngClass]="isStepCompleted('CUSTOMER_DATA') ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : (isStepActive('CUSTOMER_DATA') ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400')">
+                    <ng-container *ngIf="isStepCompleted('CUSTOMER_DATA'); else step1Num">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </ng-container>
+                    <ng-template #step1Num>1</ng-template>
                 </div>
                 <span class="text-xs font-bold uppercase tracking-wider"
-                    [ngClass]="currentStep === 'CUSTOMER_DATA' ? 'text-blue-600' : 'text-slate-400'">
+                    [ngClass]="isStepCompleted('CUSTOMER_DATA') ? 'text-emerald-600' : (isStepActive('CUSTOMER_DATA') ? 'text-blue-600' : 'text-slate-400')">
                     Upload
                 </span>
             </div>
@@ -22,11 +28,17 @@
             <div class="flex flex-col items-center gap-2 bg-slate-50 px-2 z-10 cursor-pointer group"
                 (click)="setStep('INPUT_SHEET')">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-bold text-sm shadow-sm"
-                    [ngClass]="['INPUT_SHEET'].includes(currentStep) ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400'">
-                    2
+                    [ngClass]="isStepCompleted('INPUT_SHEET') ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : (isStepActive('INPUT_SHEET') ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400')">
+                    <ng-container *ngIf="isStepCompleted('INPUT_SHEET'); else step2Num">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </ng-container>
+                    <ng-template #step2Num>2</ng-template>
                 </div>
                 <span class="text-xs font-bold uppercase tracking-wider"
-                    [ngClass]="['INPUT_SHEET'].includes(currentStep) ? 'text-blue-600' : 'text-slate-400'">
+                    [ngClass]="isStepCompleted('INPUT_SHEET') ? 'text-emerald-600' : (isStepActive('INPUT_SHEET') ? 'text-blue-600' : 'text-slate-400')">
                     Validation
                 </span>
             </div>
@@ -34,22 +46,34 @@
             <div class="flex flex-col items-center gap-2 bg-slate-50 px-2 z-10 cursor-pointer group"
                 (click)="currentStep === 'MAMBA' ? null : null">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-bold text-sm shadow-sm"
-                    [ngClass]="currentStep === 'MAMBA' ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400'">
-                    3
+                    [ngClass]="isStepCompleted('MAMBA') ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : (isStepActive('MAMBA') ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400')">
+                    <ng-container *ngIf="isStepCompleted('MAMBA'); else step3Num">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </ng-container>
+                    <ng-template #step3Num>3</ng-template>
                 </div>
                 <span class="text-xs font-bold uppercase tracking-wider"
-                    [ngClass]="currentStep === 'MAMBA' ? 'text-blue-600' : 'text-slate-400'">
+                    [ngClass]="isStepCompleted('MAMBA') ? 'text-emerald-600' : (isStepActive('MAMBA') ? 'text-blue-600' : 'text-slate-400')">
                     Simulation
                 </span>
             </div>
             <!-- Step 4: Results -->
             <div class="flex flex-col items-center gap-2 bg-slate-50 px-2 z-10 cursor-pointer group">
                 <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 font-bold text-sm shadow-sm"
-                    [ngClass]="currentStep === 'RESULTS' ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400'">
-                    4
+                    [ngClass]="isStepCompleted('RESULTS') ? 'border-emerald-500 bg-emerald-50 text-emerald-600' : (isStepActive('RESULTS') ? 'border-blue-500 bg-blue-50 text-blue-600 scale-110' : 'border-slate-300 bg-white text-slate-400')">
+                    <ng-container *ngIf="isStepCompleted('RESULTS'); else step4Num">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </ng-container>
+                    <ng-template #step4Num>4</ng-template>
                 </div>
                 <span class="text-xs font-bold uppercase tracking-wider"
-                    [ngClass]="currentStep === 'RESULTS' ? 'text-blue-600' : 'text-slate-400'">
+                    [ngClass]="isStepCompleted('RESULTS') ? 'text-emerald-600' : (isStepActive('RESULTS') ? 'text-blue-600' : 'text-slate-400')">
                     Results
                 </span>
             </div>
@@ -171,7 +195,7 @@
                     </button>
                     <button (click)="runAiEstimation()" title="Estimate Missing Values"
                         class="px-4 py-2.5 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 font-bold hover:bg-purple-100 transition-colors flex items-center gap-2 text-sm mr-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                         </svg>
@@ -207,8 +231,8 @@
                             class="bg-slate-100 text-slate-500 uppercase text-xs font-bold border-b border-slate-200">
                             <tr>
                                 <th class="p-4 w-[40%]">Parameter</th>
-                                <th class="p-4 w-[40%]">Value & Spec</th> <!-- Combined Column -->
-                                <th class="p-4 w-[20%] text-right pr-8">Status</th> <!-- Combined Source/Status -->
+                                <th class="p-4 w-[40%]">Value </th> <!-- Combined Column -->
+                                <th class="p-4 w-[20%] text-right pr-8">Trust Level</th> <!-- Combined Source/Status -->
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -259,10 +283,10 @@
                                                         'border-orange-500 focus:border-orange-500 focus:ring-orange-100': isMissing(param.id) && param.mandatoryStatus === 'semi-mandatory',
                                                         'border-blue-300 focus:border-blue-400 focus:ring-blue-100': isMissing(param.id) && param.mandatoryStatus === 'optional',
                                                         'border-slate-300 focus:border-blue-500 focus:ring-blue-100': !isMissing(param.id),
-                                                        'text-black font-bold': dataService.variants[0].values[param.id]?.source === 'Input Sheet',
-                                                        'text-blue-600 font-medium italic': ['Default', 'Estimated'].includes(dataService.variants[0].values[param.id]?.source || ''),
-                                                        'text-slate-600': !['Input Sheet', 'Default', 'Estimated'].includes(dataService.variants[0].values[param.id]?.source || '')
-                                                    }" placeholder="Enter value..." />
+                                                        'text-black font-bold': dataService.variants[0].values[param.id]?.source === 'Imported',
+                                                        'text-blue-600 font-medium italic': ['Default', 'Estimation'].includes(dataService.variants[0].values[param.id]?.source || ''),
+                                                        'text-slate-600': !['Imported', 'Default', 'Estimation'].includes(dataService.variants[0].values[param.id]?.source || '')
+                                                    }" />
                                                 <!-- Unit Suffix (Optional visual flair) -->
                                                 <span *ngIf="param.unit"
                                                     class="absolute right-3 top-2 text-xs text-slate-400 pointer-events-none">
@@ -299,11 +323,12 @@
                                             <!-- Source Badge -->
                                             <span
                                                 class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wide border"
-                                                [ngClass]="{
-                                                    'bg-slate-100 border-slate-200 text-slate-500': !dataService.variants[0].values[param.id]?.source || dataService.variants[0].values[param.id]?.source === 'Manual',
-                                                    'bg-blue-50 border-blue-100 text-blue-600': dataService.variants[0].values[param.id]?.source === 'Input Sheet',
-                                                    'bg-purple-50 border-purple-100 text-purple-600': dataService.variants[0].values[param.id]?.source === 'Estimated' || dataService.variants[0].values[param.id]?.source === 'Default'
-                                                }">
+                                                                [ngClass]="{
+                'bg-blue-50 border border-blue-100 text-blue-600': dataService.variants[0].values[param.id]?.source === 'Imported',
+                'bg-purple-50 border border-purple-100 text-purple-600': dataService.variants[0].values[param.id]?.source === 'Estimation',
+                'bg-white': !dataService.variants[0].values[param.id]?.source || dataService.variants[0].values[param.id]?.source === 'Manual'
+                }"
+                    >
                                                 {{ dataService.variants[0].values[param.id]?.source || 'MANUAL' }}
                                             </span>
 

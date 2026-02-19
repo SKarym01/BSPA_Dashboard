@@ -3,30 +3,210 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Bosch Sans */
+@font-face {
+    font-family: 'boschsans';
+    src: url('/assets/fonts/boschsans_regular.woff2') format('woff2'),
+         url('/assets/fonts/boschsans_regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'boschsans';
+    src: url('/assets/fonts/boschsans_bold.woff2') format('woff2'),
+         url('/assets/fonts/boschsans_bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
-    /* Premium Palette - Light Mode Centric */
-    --color-bg-primary: #f8fafc;
-    /* Slate 50 */
-    --color-bg-secondary: #ffffff;
-    --color-bg-tertiary: #f1f5f9;
-    /* Slate 100 */
+    /* Bosch Palette */
+    --color-bosch-red-95: #ffecec;
+    --color-bosch-red-90: #ffd9d9;
+    --color-bosch-red-85: #ffc6c6;
+    --color-bosch-red-80: #ffb2b2;
+    --color-bosch-red-75: #ff9d9d;
+    --color-bosch-red-70: #ff8787;
+    --color-bosch-red-65: #ff6e6f;
+    --color-bosch-red-60: #ff5152;
+    --color-bosch-red-55: #ff2124;
+    --color-bosch-red-50: #ed0007;
+    --color-bosch-red-45: #d50005;
+    --color-bosch-red-40: #be0004;
+    --color-bosch-red-35: #a80003;
+    --color-bosch-red-30: #920002;
+    --color-bosch-red-25: #7d0002;
+    --color-bosch-red-20: #680001;
+    --color-bosch-red-15: #540001;
+    --color-bosch-red-10: #410000;
+    --color-bosch-red-5: #2d0000;
 
-    --color-accent-primary: #2563eb;
-    /* Blue 600 */
-    --color-accent-secondary: #0891b2;
-    /* Cyan 600 */
-    --color-accent-glow: rgba(37, 99, 235, 0.2);
+    --color-bosch-purple-95: #f7eef6;
+    --color-bosch-purple-90: #f0dcee;
+    --color-bosch-purple-85: #ebcae8;
+    --color-bosch-purple-80: #e8b6e3;
+    --color-bosch-purple-75: #e5a2df;
+    --color-bosch-purple-70: #e48cdd;
+    --color-bosch-purple-65: #e472db;
+    --color-bosch-purple-60: #e552da;
+    --color-bosch-purple-55: #d543cb;
+    --color-bosch-purple-50: #c535bc;
+    --color-bosch-purple-45: #b12ea9;
+    --color-bosch-purple-40: #9e2896;
+    --color-bosch-purple-35: #8b2284;
+    --color-bosch-purple-30: #791d73;
+    --color-bosch-purple-25: #671761;
+    --color-bosch-purple-20: #551151;
+    --color-bosch-purple-15: #440c41;
+    --color-bosch-purple-10: #340731;
+    --color-bosch-purple-5: #230421;
 
-    --color-text-primary: #0f172a;
-    /* Slate 900 */
-    --color-text-secondary: #475569;
-    /* Slate 600 */
-    --color-text-muted: #94a3b8;
-    /* Slate 400 */
+    --color-bosch-blue-95: #e8f1ff;
+    --color-bosch-blue-90: #d1e4ff;
+    --color-bosch-blue-85: #b8d6ff;
+    --color-bosch-blue-80: #9dc9ff;
+    --color-bosch-blue-75: #7ebdff;
+    --color-bosch-blue-70: #56b0ff;
+    --color-bosch-blue-65: #00a4fd;
+    --color-bosch-blue-60: #0096e8;
+    --color-bosch-blue-55: #0088d4;
+    --color-bosch-blue-50: #007bc0;
+    --color-bosch-blue-45: #006ead;
+    --color-bosch-blue-40: #00629a;
+    --color-bosch-blue-35: #005587;
+    --color-bosch-blue-30: #004975;
+    --color-bosch-blue-25: #003e64;
+    --color-bosch-blue-20: #003253;
+    --color-bosch-blue-15: #002742;
+    --color-bosch-blue-10: #001d33;
+    --color-bosch-blue-5: #001222;
 
-    --color-success: #10b981;
-    --color-warning: #f59e0b;
-    --color-danger: #ef4444;
+    --color-bosch-turquoise-95: #def5f3;
+    --color-bosch-turquoise-90: #b6ede8;
+    --color-bosch-turquoise-85: #a1dfdb;
+    --color-bosch-turquoise-80: #8dd2cd;
+    --color-bosch-turquoise-75: #79c5c0;
+    --color-bosch-turquoise-70: #66b8b2;
+    --color-bosch-turquoise-65: #54aba5;
+    --color-bosch-turquoise-60: #419e98;
+    --color-bosch-turquoise-55: #2e908b;
+    --color-bosch-turquoise-50: #18837e;
+    --color-bosch-turquoise-45: #147671;
+    --color-bosch-turquoise-40: #116864;
+    --color-bosch-turquoise-35: #0e5b57;
+    --color-bosch-turquoise-30: #0a4f4b;
+    --color-bosch-turquoise-25: #07423f;
+    --color-bosch-turquoise-20: #053634;
+    --color-bosch-turquoise-15: #032b28;
+    --color-bosch-turquoise-10: #02201e;
+    --color-bosch-turquoise-5: #011413;
+
+    --color-bosch-green-95: #e2f5e7;
+    --color-bosch-green-90: #b8efc9;
+    --color-bosch-green-85: #9be4b3;
+    --color-bosch-green-80: #86d7a2;
+    --color-bosch-green-75: #72ca92;
+    --color-bosch-green-70: #5ebd82;
+    --color-bosch-green-65: #4ab073;
+    --color-bosch-green-60: #37a264;
+    --color-bosch-green-55: #219557;
+    --color-bosch-green-50: #00884a;
+    --color-bosch-green-45: #007a42;
+    --color-bosch-green-40: #006c3a;
+    --color-bosch-green-35: #005f32;
+    --color-bosch-green-30: #00512a;
+    --color-bosch-green-25: #004523;
+    --color-bosch-green-20: #00381b;
+    --color-bosch-green-15: #002c14;
+    --color-bosch-green-10: #00210e;
+    --color-bosch-green-5: #001507;
+
+    --color-bosch-gray-95: rgb(239 241 242);
+    --color-bosch-gray-90: rgb(224 226 229);
+    --color-bosch-gray-85: #d0d4d8;
+    --color-bosch-gray-80: #c1c7cc;
+    --color-bosch-gray-75: #b2b9c0;
+    --color-bosch-gray-70: #a4abb3;
+    --color-bosch-gray-65: #979ea4;
+    --color-bosch-gray-60: #8a9097;
+    --color-bosch-gray-55: #7d8389;
+    --color-bosch-gray-50: #71767c;
+    --color-bosch-gray-45: #656a6f;
+    --color-bosch-gray-40: #595e62;
+    --color-bosch-gray-35: #4e5256;
+    --color-bosch-gray-30: #43464a;
+    --color-bosch-gray-25: #383b3e;
+    --color-bosch-gray-20: #2e3033;
+    --color-bosch-gray-15: #232628;
+    --color-bosch-gray-10: #1a1c1d;
+    --color-bosch-gray-5: #101112;
+
+    --color-bosch-yellow-95: #ffefd1;
+    --color-bosch-yellow-90: #ffdf95;
+    --color-bosch-yellow-85: #ffcf00;
+    --color-bosch-yellow-80: #eec100;
+    --color-bosch-yellow-75: #deb300;
+    --color-bosch-yellow-70: #cda600;
+    --color-bosch-yellow-65: #bd9900;
+    --color-bosch-yellow-60: #ad8c00;
+    --color-bosch-yellow-55: #9e7f00;
+    --color-bosch-yellow-50: #8f7300;
+    --color-bosch-yellow-45: #806700;
+    --color-bosch-yellow-40: #725b00;
+    --color-bosch-yellow-35: #644f00;
+    --color-bosch-yellow-30: #564400;
+    --color-bosch-yellow-25: #493900;
+    --color-bosch-yellow-20: #3c2e00;
+    --color-bosch-yellow-15: #2f2400;
+    --color-bosch-yellow-10: #231a00;
+    --color-bosch-yellow-5: #171000;
+
+    --color-bosch-white: rgb(255 255 255);
+    --color-bosch-black: rgb(0 0 0);
+
+    /* Semantic Theme Layer (gray + blue) */
+    --background__primary: var(--color-bosch-gray-95);
+    --background__secondary: var(--color-bosch-white);
+    --background__contrast: var(--color-bosch-gray-90);
+    --background__floating: var(--color-bosch-white);
+
+    --plain__enabled__front__default: var(--color-bosch-black);
+    --plain__hovered__front__default: var(--color-bosch-gray-35);
+    --plain__pressed__front__default: var(--color-bosch-gray-25);
+    --plain__disabled__front__default: var(--color-bosch-gray-60);
+
+    --major-accent__enabled__fill__default: var(--color-bosch-blue-50);
+    --major-accent__hovered__fill__default: var(--color-bosch-blue-55);
+    --major-accent__pressed__fill__default: var(--color-bosch-blue-60);
+    --major-accent__disabled__fill__default: var(--color-bosch-blue-90);
+    --major-accent__enabled__front__default: var(--color-bosch-white);
+
+    --minor-accent__enabled__front__default: var(--color-bosch-blue-50);
+    --minor-accent__hovered__front__default: var(--color-bosch-blue-45);
+    --minor-accent__pressed__front__default: var(--color-bosch-blue-40);
+    --minor-accent__disabled__front__default: var(--color-bosch-blue-85);
+
+    --integrated__enabled__fill__default: var(--color-bosch-gray-90);
+    --integrated__hovered__fill__default: var(--color-bosch-gray-85);
+    --integrated__pressed__fill__default: var(--color-bosch-gray-80);
+    --integrated__disabled__fill__default: var(--color-bosch-gray-95);
+    --integrated__enabled__front__default: var(--color-bosch-gray-15);
+
+    /* Practical Defaults */
+    --color-accent-primary: var(--color-bosch-blue-50);
+    --color-accent-secondary: var(--color-bosch-turquoise-50);
+    --color-bg-primary: var(--color-bosch-gray-95);
+    --color-bg-secondary: var(--color-bosch-white);
+    --color-bg-tertiary: var(--color-bosch-gray-90);
+    --color-text-primary: var(--color-bosch-black);
+    --color-text-secondary: var(--color-bosch-gray-35);
+    --color-text-muted: var(--color-bosch-gray-60);
+    --color-success: var(--color-bosch-green-50);
+    --color-warning: var(--color-bosch-yellow-80);
+    --color-danger: var(--color-bosch-red-50);
 
     /* Glassmorphism tuned for Light Mode */
     --glass-bg: rgba(255, 255, 255, 0.7);
@@ -37,7 +217,7 @@
 body {
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
-    font-family: 'Inter', sans-serif;
+    font-family: 'boschsans';
     overflow-x: hidden;
 }
 
@@ -113,4 +293,77 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Theme contrast boosts (keep palette, increase presence) */
+.bg-slate-50 {
+    background-color: #eef2f7;
+}
+
+.bg-slate-50\/50 {
+    background-color: rgba(238, 242, 247, 0.6);
+}
+
+.bg-slate-100 {
+    background-color: #e2e8f0;
+}
+
+.text-slate-400 {
+    color: #64748b;
+}
+
+.text-slate-500 {
+    color: #475569;
+}
+
+.text-slate-600 {
+    color: #334155;
+}
+
+.border-slate-100 {
+    border-color: #e2e8f0;
+}
+
+.border-slate-200 {
+    border-color: #cbd5e1;
+}
+
+.border-slate-300 {
+    border-color: #b6c2d2;
+}
+
+.bg-blue-50 {
+    background-color: #e0ecff;
+}
+
+.text-blue-600 {
+    color: #1d4ed8;
+}
+
+.border-blue-100 {
+    border-color: #c7ddff;
+}
+
+.bg-purple-50 {
+    background-color: #f2e9ff;
+}
+
+.text-purple-600 {
+    color: #6d28d9;
+}
+
+.bg-orange-50 {
+    background-color: #ffedd5;
+}
+
+.text-orange-700 {
+    color: #c2410c;
+}
+
+.bg-red-50 {
+    background-color: #fee2e2;
+}
+
+.text-red-500 {
+    color: #dc2626;
 }

@@ -45,10 +45,15 @@ import { filter } from 'rxjs/operators';
 
       <!-- Bottom / Footer -->
       <div class="p-4 border-t border-slate-200 bg-slate-50">
-          <button (click)="goToHome()" class="flex items-center gap-3 text-slate-500 hover:text-slate-800 transition-colors text-sm font-medium w-full p-2 rounded hover:bg-white">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Dashboard Home
-          </button>
+          <div class="flex items-center gap-3 text-slate-600 text-sm font-medium w-full p-2">
+              <div class="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 font-bold text-xs">
+                  SK
+              </div>
+              <div class="flex flex-col leading-tight">
+                  <span class="text-sm font-bold text-slate-800">Shaam Karym</span>
+                  <span class="text-xs text-slate-500">Lead Engineer</span>
+              </div>
+          </div>
       </div>
 
     </aside>

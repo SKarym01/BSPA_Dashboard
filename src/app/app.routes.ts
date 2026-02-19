@@ -13,4 +13,5 @@ export const routes: Routes = [
     { path: 'minor', component: SheetComponent, data: { mode: 'minor' } },
     { path: 'check', component: CheckStatusComponent },
     { path: 'sheet', component: SheetComponent },
+    { path: 'validation', component: SheetComponent },
 ];
