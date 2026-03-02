@@ -25,6 +25,7 @@ export class NewBspaComponent implements OnInit {
   isSimulating = false;
   simulationResult: MambaResult | null = null;
   epcValues: { [paramId: string]: any } = {};
+  hasUploadedInputSheet = false;
 
   @ViewChild('fileInput') fileInputRef!: ElementRef<HTMLInputElement>;
 
@@ -82,6 +83,7 @@ export class NewBspaComponent implements OnInit {
   }
 
   isEpcMismatch(paramId: string): boolean {
+    if (!this.hasUploadedInputSheet) return false;
     if (!this.epcNumber || this.epcValues[paramId] === undefined) return false;
     const currentVal = this.dataService.variants[0].values[paramId]?.value;
     const epcVal = this.epcValues[paramId];
@@ -94,6 +96,7 @@ export class NewBspaComponent implements OnInit {
 
   nextStep() {
     if (this.currentStep === 'CUSTOMER_DATA') {
+      this.hasUploadedInputSheet = false;
       this.setStep('INPUT_SHEET');
       this.router.navigate(['/validation']);
     }
@@ -110,13 +113,23 @@ export class NewBspaComponent implements OnInit {
 
     const variantId = this.dataService.variants[0].id;
     const existing = this.dataService.variants[0].values[paramId];
+    const isMissing = newValue === '' || newValue === null || newValue === undefined;
 
     if (existing) {
       existing.value = newValue;
-      existing.isMissing = newValue === '' || newValue === null || newValue === undefined;
-      if (!existing.isMissing) existing.source = 'Manual';
+      existing.isMissing = isMissing;
+
+      if (existing.isMissing) {
+        existing.trustLevel = undefined;
+        return;
+      }
+
+      existing.source = 'Manual';
+      const shouldResetTrustLevel =
+        !existing.trustLevel || ['Imported', 'From EPC', 'Estimation'].includes(existing.trustLevel);
+      if (shouldResetTrustLevel) existing.trustLevel = 'Not set';
     } else {
-      this.dataService.setParameterValue(variantId, paramId, newValue, 'Manual');
+      this.dataService.setParameterValue(variantId, paramId, newValue, 'Manual', isMissing ? undefined : 'Not set');
     }
   }
 
@@ -128,7 +141,7 @@ export class NewBspaComponent implements OnInit {
     group.parameters.forEach(param => {
       if (this.isMissing(param.id) && param.defaultValue !== undefined) {
         // Defaults zählen bei dir als Estimation (weil nur 3 Status erlaubt)
-        this.dataService.setParameterValue(v.id, param.id, param.defaultValue, 'Estimation', 4);
+        this.dataService.setParameterValue(v.id, param.id, param.defaultValue, 'Manual', 'Design value');
       }
     });
   });
@@ -252,13 +265,13 @@ export class NewBspaComponent implements OnInit {
           this.dataService.variants = parsed.variants.map((v: { id: string; name: string; values: Record<string, any> }) => ({
             id: v.id,
             name: v.name,
-            values: Object.fromEntries(
-              Object.entries(v.values).map(([paramId, val]) => [
-                paramId,
-                { value: val, source: 'Imported', trustLevel: 5 }
-              ])
-            )
-          }));
+                values: Object.fromEntries(
+                  Object.entries(v.values).map(([paramId, val]) => [
+                    paramId,
+                    { value: val, source: 'Imported', trustLevel: 'Imported' }
+                  ])
+                )
+              }));
         } else {
           // fallback: discover groups then map values
           const discovered = (extractor as any).discoverParameterGroups?.() ?? [];
@@ -270,11 +283,12 @@ export class NewBspaComponent implements OnInit {
           const results = extractor.extractAllParameters(this.dataService.parameterGroups);
 
           results.forEach(res => {
-            this.dataService.setParameterValue(variantId, res.paramId, res.foundValue, 'Imported', 5);
+            this.dataService.setParameterValue(variantId, res.paramId, res.foundValue, 'Imported', 'Imported');
           });
         }
 
         // ✅ AFTER UPLOAD: go directly to VALIDATION
+        this.hasUploadedInputSheet = true;
         this.epcNumber = this.dataService.projectData.epcNumber || this.epcNumber;
         if (this.epcNumber) this.loadEpcData();
 

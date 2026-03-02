@@ -2,7 +2,7 @@
 // ✅ data.service.ts (FULL, LIKE YOUR VERSION)
 // - keeps your structure 1:1
 // - BUT: status sources only: Manual / Imported / Estimation
-// - setParameterValue supports trustLevel (because your upload code uses it)
+// - setParameterValue supports trustLevel (discrete origin label for filled params)
 // - projectDescription included (because your UI shows it)
 // =======================================
 
@@ -30,11 +30,19 @@ export type WorkflowStep =
 // ✅ ONLY these 3 sources (as you requested)
 export type ValueSource = 'Manual' | 'Imported' | 'Estimation';
 
+export type TrustLevel =
+  | 'Not set'
+  | 'Design value'
+  | 'Estimation'
+  | 'From customer'
+  | 'Imported'
+  | 'From EPC';
+
 export interface ParameterValue {
   value: any;
   source: ValueSource;
   isMissing?: boolean; // Flag for missing simulation-critical values
-  trustLevel?: number; // optional for imported/estimated scoring
+  trustLevel?: TrustLevel; // origin label (shown when filled)
 }
 
 /**
@@ -197,14 +205,14 @@ export class DataService {
 
   /**
    * Helper to set a parameter value with metadata
-   * ✅ supports trustLevel (because your upload code uses it)
+   * ✅ supports trustLevel (discrete origin label)
    */
   setParameterValue(
     variantId: string,
     paramId: string,
     value: any,
     source: ValueSource,
-    trustLevel?: number
+    trustLevel?: TrustLevel
   ) {
     const variant = this.variants.find((v) => v.id === variantId);
     if (!variant) return;
@@ -235,16 +243,16 @@ export class DataService {
             if (param.type === 'number') estimatedVal = (Math.random() * 50 + 10).toFixed(2);
             if (param.type === 'text') estimatedVal = 'Estimated-Text';
 
-            if (estimatedVal !== null) {
-              variant.values[param.id] = {
-                value: estimatedVal,
-                source: 'Estimation',
-                isMissing: false,
-                trustLevel: 4,
-              };
+              if (estimatedVal !== null) {
+                variant.values[param.id] = {
+                  value: estimatedVal,
+                  source: 'Estimation',
+                  isMissing: false,
+                  trustLevel: 'Estimation',
+                };
+              }
             }
-          }
-        });
+          });
       });
     });
   }

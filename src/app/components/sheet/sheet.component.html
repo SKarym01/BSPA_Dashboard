@@ -177,16 +177,17 @@
             <!-- Clustered Headers -->
             <thead class="bg-slate-100 text-slate-600 uppercase text-[11px] font-bold border-b border-slate-200">
               <tr>
-                <th class="p-3 w-[25%]">Parameter</th>
-                <th *ngFor="let v of dataService.variants" class="p-3 w-[25%] text-right pr-6">
+                <th class="p-3 w-[22%]">Parameter</th>
+                <th *ngFor="let v of dataService.variants" class="p-3 text-right pr-6">
                   {{ v.name || v.id }}
                 </th>
+                <th class="p-3 w-[14%] text-right pr-6">EPC</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               <ng-container *ngFor="let group of dataService.parameterGroups">
                 <tr class="bg-slate-50/50">
-                  <td [attr.colspan]="dataService.variants.length + 1"
+                  <td [attr.colspan]="dataService.variants.length + 2"
                     class="p-2 px-3 font-bold text-slate-800 text-xs tracking-wide border-b border-slate-100">
                     {{ group.groupName }}
                   </td>
@@ -233,16 +234,24 @@
                           {{ param.unit }}
                         </span>
                       </div>
-
                       <!-- Source Badge -->
                       <span class="px-2 py-0.5 rounded text-[9px] uppercase font-bold tracking-wide border"
-                        [ngClass]="{
-                          'bg-blue-50 border border-blue-100 text-blue-600': v.values[param.id]?.source === 'Imported',
-                          'bg-purple-50 border border-purple-100 text-purple-600': v.values[param.id]?.source === 'Estimation',
-                          'bg-white': !v.values[param.id]?.source || v.values[param.id]?.source === 'Manual'
-                        }">
-                        {{ v.values[param.id]?.source || 'MANUAL' }}
+                        [ngClass]="badgeClass(v.values[param.id])">
+                        {{ badgeLabel(v.values[param.id]) }}
                       </span>
+
+                      <!-- Trust Level -->
+                      <div class="w-full flex justify-end">
+                        <select
+                          [ngModel]="v.values[param.id]?.trustLevel || 'Not set'"
+                          (ngModelChange)="updateTrustLevel(param.id, $event, v.id)"
+                          [disabled]="isMissingForVariant(v.id, param.id)"
+                          class="bg-white border text-[10px] rounded-md px-2 py-1 w-full max-w-[140px] focus:ring-2 focus:outline-none transition-all shadow-sm text-right"
+                          [ngClass]="(v.values[param.id]?.trustLevel || 'Not set') === 'Not set' ? 'border-red-300 bg-red-50 text-red-700 focus:border-red-400 focus:ring-red-100' : 'border-slate-300 text-slate-700 focus:border-blue-500 focus:ring-blue-100'"
+                        >
+                          <option *ngFor="let tl of trustLevelOptions" [ngValue]="tl">{{ tl }}</option>
+                        </select>
+                      </div>
 
                       <!-- Quick Check -->
                       <span *ngIf="!isMissingForVariant(v.id, param.id)"
@@ -256,6 +265,21 @@
                       <span *ngIf="isMissingForVariant(v.id, param.id) && param.mandatoryStatus === 'mandatory'"
                         class="text-red-500 text-[10px] font-bold">Required</span>
                     </div>
+                  </td>
+                  <td class="p-2 align-top text-right pr-6">
+                    <div *ngIf="epcValues[param.id] !== undefined; else noEpcRef"
+                      class="flex justify-end items-center gap-1 text-[10px]">
+                      <span class="font-mono px-1 rounded"
+                        [ngClass]="isEpcMismatchAnyVariant(param.id) ? 'text-red-600 font-bold bg-red-50' : 'text-slate-500'">
+                        {{ epcValues[param.id] }}
+                      </span>
+                      <span *ngIf="isEpcMismatchAnyVariant(param.id)" class="text-red-500" title="Values do not match">
+                        !
+                      </span>
+                    </div>
+                    <ng-template #noEpcRef>
+                      <span class="text-[10px] text-slate-400">-</span>
+                    </ng-template>
                   </td>
                 </tr>
               </ng-container>
