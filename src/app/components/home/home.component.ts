@@ -16,7 +16,11 @@ export class HomeComponent {
         public dataService: DataService // Inject DataService
     ) { }
 
-    get runningDraftsCount(): number {
-        return this.dataService.drafts.filter(d => d.status === 'Running').length;
+    get activeProjectsCount(): number {
+        return this.dataService.drafts.filter(d => d.status === 'Draft' || d.status === 'Running').length;
+    }
+
+    get completedProjectsCount(): number {
+        return this.dataService.drafts.filter(d => d.status === 'Completed').length;
     }
 }

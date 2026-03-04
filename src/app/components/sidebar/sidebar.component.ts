@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { DataService } from '../../services/data.service';
 
 @Component({
     selector: 'app-sidebar',
@@ -17,8 +18,8 @@ import { filter } from 'rxjs/operators';
             Main Functions
         </div>
 
-        <a routerLink="/new" routerLinkActive="bg-blue-50 text-blue-600 border-blue-200"
-           class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors border border-transparent group">
+        <a (click)="forceNew()" routerLink="/new" routerLinkActive="bg-blue-50 text-blue-600 border-blue-200"
+           class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors border border-transparent group cursor-pointer">
             <div class="w-8 h-8 rounded-md bg-blue-100/50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-105 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </div>
@@ -60,9 +61,13 @@ import { filter } from 'rxjs/operators';
   `
 })
 export class SidebarComponent {
-    constructor(private router: Router) { }
+    constructor(private router: Router, private dataService: DataService) { }
 
     goToHome() {
         this.router.navigate(['/home']);
+    }
+
+    forceNew() {
+        this.dataService.resetProjectData();
     }
 }

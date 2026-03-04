@@ -35,7 +35,6 @@ export class SheetComponent implements OnInit {
         });
         this.epcNumber = this.dataService.projectData.epcNumber || '';
         if (this.epcNumber) this.loadEpcData();
-        this.applyDemoEpcValues();
     }
 
     stepIndex(step: WorkflowStep): number {
@@ -48,6 +47,33 @@ export class SheetComponent implements OnInit {
 
     isStepCompleted(step: WorkflowStep): boolean {
         return this.stepIndex(step) < this.stepIndex(this.currentStep);
+    }
+
+    collapsedGroups = new Set<string>();
+    expandedCurves = new Set<string>();
+
+    toggleGroup(groupName: string) {
+        if (this.collapsedGroups.has(groupName)) {
+            this.collapsedGroups.delete(groupName);
+        } else {
+            this.collapsedGroups.add(groupName);
+        }
+    }
+
+    isGroupCollapsed(groupName: string): boolean {
+        return this.collapsedGroups.has(groupName);
+    }
+
+    toggleCurve(paramId: string) {
+        if (this.expandedCurves.has(paramId)) {
+            this.expandedCurves.delete(paramId);
+        } else {
+            this.expandedCurves.add(paramId);
+        }
+    }
+
+    isCurveExpanded(paramId: string): boolean {
+        return this.expandedCurves.has(paramId);
     }
 
     loadEpcData() {
@@ -88,30 +114,7 @@ export class SheetComponent implements OnInit {
         return this.dataService.variants.some(v => this.isEpcMismatchForVariant(v.id, paramId));
     }
 
-    private applyDemoEpcValues() {
-        this.dataService.parameterGroups.forEach(group => {
-            group.parameters.forEach(param => {
-                const baseVal = this.dataService.variants[0]?.values[param.id]?.value;
-                this.epcValues[param.id] = this.createDemoEpcValue(baseVal, param.type);
-            });
-        });
-    }
 
-    private createDemoEpcValue(baseVal: any, type: string): any {
-        if (type === 'number') {
-            const baseNum = Number(baseVal);
-            const fallback = Math.random() * 90 + 10;
-            const seed = Number.isFinite(baseNum) ? baseNum : fallback;
-            const factor = 0.9 + Math.random() * 0.2;
-            return (seed * factor).toFixed(2);
-        }
-
-        if (baseVal !== undefined && baseVal !== null && String(baseVal).trim() !== '') {
-            return Math.random() < 0.5 ? String(baseVal) : `${String(baseVal)} EPC`;
-        }
-
-        return `EPC-${Math.floor(Math.random() * 900 + 100)}`;
-    }
 
     updateParamValue(paramId: string, newValue: any, variantId?: string) {
         if (this.dataService.variants.length === 0) return;
@@ -193,10 +196,15 @@ export class SheetComponent implements OnInit {
 
         this.dataService.parameterGroups.forEach(group => {
             group.parameters.forEach(param => {
-                if (param.defaultValue === undefined) return;
                 variants.forEach(v => {
-                    if (this.isMissingForVariant(v.id, param.id)) {
-                        this.dataService.setParameterValue(v.id, param.id, param.defaultValue, 'Manual', 'Design value');
+                    const currentVal = v.values[param.id];
+                    if (!currentVal || currentVal.value === '' || currentVal.value === undefined || currentVal.value === null) {
+                        let fillVal: any = null;
+                        if (param.type === 'number') fillVal = (Math.random() * 80 + 5).toFixed(2);
+                        else if (param.type === 'curve') fillVal = 'Autofilled Curve Data';
+                        else fillVal = 'Autofill-Text';
+
+                        this.dataService.setParameterValue(v.id, param.id, fillVal, 'Manual', 'Estimation');
                     }
                 });
             });
@@ -205,50 +213,6 @@ export class SheetComponent implements OnInit {
 
     runAiEstimation() {
         this.dataService.estimateMissingValues();
-    }
-
-    demoMixValues() {
-        const variants = this.dataService.variants;
-        if (!variants.length) return;
-
-        const fillChance = (status: string): number => {
-            if (status === 'mandatory') return 0.75;
-            if (status === 'semi-mandatory') return 0.6;
-            return 0.4;
-        };
-
-        const pickSource = (): 'Manual' | 'Imported' | 'Estimation' => {
-            const r = Math.random();
-            if (r < 0.45) return 'Imported';
-            if (r < 0.75) return 'Manual';
-            return 'Estimation';
-        };
-
-        const randomValue = (param: any): any => {
-            if (param.type === 'number') return (Math.random() * 90 + 10).toFixed(2);
-            if (param.type === 'select') {
-                const opts = param.options || [];
-                return opts.length ? opts[Math.floor(Math.random() * opts.length)] : 'Option A';
-            }
-            return `Demo-${Math.floor(Math.random() * 90 + 10)}`;
-        };
-
-        this.dataService.parameterGroups.forEach(group => {
-            group.parameters.forEach(param => {
-                variants.forEach(v => {
-                    const shouldFill = Math.random() < fillChance(param.mandatoryStatus);
-                    if (shouldFill) {
-                        const value = randomValue(param);
-                        const source = pickSource();
-                        const trustLevel: TrustLevel | undefined =
-                            source === 'Imported' ? 'Imported' : (source === 'Estimation' ? 'Estimation' : 'Not set');
-                        this.dataService.setParameterValue(v.id, param.id, value, source, trustLevel);
-                    } else {
-                        this.dataService.setParameterValue(v.id, param.id, '', 'Manual');
-                    }
-                });
-            });
-        });
     }
 
     saveAsDraft() {
@@ -266,9 +230,9 @@ export class SheetComponent implements OnInit {
     }
 
     startBspa() {
-        const isValid = this.dataService.validateForMamba();
-        if (!isValid) {
-            alert('Please fill in all MANDATORY (Red) fields before starting BSPA.');
+        const missingParams = this.dataService.validateForMamba();
+        if (missingParams.length > 0) {
+            alert('Please fill in the following MANDATORY (Red) fields before starting BSPA:\n\n- ' + missingParams.join('\n- '));
             return;
         }
 

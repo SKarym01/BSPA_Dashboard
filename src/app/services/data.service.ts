@@ -56,7 +56,7 @@ export interface ProductVariant {
 
 export type CheckStatus = 'check' | '';
 
-export type MandatoryStatus = 'mandatory' | 'semi-mandatory' | 'optional';
+export type MandatoryStatus = 'mandatory' | 'semi-mandatory' | 'optional' | 'irrelevant';
 
 export interface DraftProject {
   id: string;
@@ -176,6 +176,7 @@ export class DataService {
       groupName: '3. Brake pedal',
       parameters: [
         { id: 'p3_1', name: 'Pedal ratio', unit: '', type: 'text', userComment: '', mandatoryStatus: 'semi-mandatory', defaultValue: '3.5' },
+        { id: 'p3_2', name: 'Pedal feel charac.', unit: 'curve', type: 'curve', userComment: '', mandatoryStatus: 'mandatory' },
       ],
     },
   ];
@@ -185,7 +186,17 @@ export class DataService {
   // =========================
   variants: ProductVariant[] = [{ id: 'v1', name: 'Variant A', values: {} }];
 
-  constructor() {}
+  constructor() {
+    // Randomly assign mandatoryStatus for prototypical purposes
+    const statuses: MandatoryStatus[] = ['mandatory', 'semi-mandatory', 'optional', 'irrelevant'];
+    this.parameterGroups.forEach(group => {
+      group.parameters.forEach(param => {
+        // Simple random element from array
+        const randomIndex = Math.floor(Math.random() * statuses.length);
+        param.mandatoryStatus = statuses[randomIndex];
+      });
+    });
+  }
 
   updateWorkflowStep(step: WorkflowStep) {
     this._currentWorkflowStep.next(step);
@@ -243,26 +254,26 @@ export class DataService {
             if (param.type === 'number') estimatedVal = (Math.random() * 50 + 10).toFixed(2);
             if (param.type === 'text') estimatedVal = 'Estimated-Text';
 
-              if (estimatedVal !== null) {
-                variant.values[param.id] = {
-                  value: estimatedVal,
-                  source: 'Estimation',
-                  isMissing: false,
-                  trustLevel: 'Estimation',
-                };
-              }
+            if (estimatedVal !== null) {
+              variant.values[param.id] = {
+                value: estimatedVal,
+                source: 'Estimation',
+                isMissing: false,
+                trustLevel: 'Estimation',
+              };
             }
-          });
+          }
+        });
       });
     });
   }
 
   /**
    * Validate for MAMBA Simulation
-   * @returns boolean true if valid, false if blocked
+   * @returns string[] array of missing mandatory parameter names
    */
-  validateForMamba(): boolean {
-    let isValid = true;
+  validateForMamba(): string[] {
+    const missingParams: Set<string> = new Set();
 
     this.variants.forEach((variant) => {
       this.parameterGroups.forEach((group) => {
@@ -270,7 +281,7 @@ export class DataService {
           if (param.mandatoryStatus === 'mandatory') {
             const val = variant.values[param.id];
             if (!val || val.value === '' || val.value === undefined || val.value === null) {
-              isValid = false;
+              missingParams.add(param.name);
 
               if (!variant.values[param.id]) {
                 variant.values[param.id] = { value: '', source: 'Manual', isMissing: true };
@@ -283,24 +294,42 @@ export class DataService {
       });
     });
 
-    return isValid;
+    return Array.from(missingParams);
   }
 
-  /**
-   * Returns mock reference data for an EPC number.
-   * In a real app, this would fetch from a database.
-   */
   getMockEpcData(epc: string): { [paramId: string]: any } {
+    if (!epc) return {};
+
     const mockData: { [paramId: string]: any } = {};
 
-    this.parameterGroups.forEach((group) => {
-      group.parameters.forEach((param) => {
-        if (param.type === 'number') mockData[param.id] = 12.5;
-        else mockData[param.id] = 'Bosch Ref';
+    let index = 0;
+    this.parameterGroups.forEach(group => {
+      group.parameters.forEach(param => {
+        index++;
+
+        // Simulate missing EPC data: Every 4th parameter is omitted from EPC
+        if (index % 4 === 0) return;
+
+        const currentVal = this.variants[0]?.values[param.id]?.value;
+
+        // Simulate mismatch: Every 3rd parameter has a different value in EPC
+        if (index % 3 === 0) {
+          if (param.type === 'number' || (currentVal !== undefined && currentVal !== null && !isNaN(Number(currentVal)))) {
+            mockData[param.id] = Number(currentVal || 10) + 12;
+          } else {
+            mockData[param.id] = 'Alternative ' + (currentVal || 'Val');
+          }
+        } else {
+          // Simulate match: Give it the exact same value, or a fake default
+          if (currentVal && String(currentVal).trim() !== '') {
+            mockData[param.id] = currentVal;
+          } else {
+            mockData[param.id] = param.type === 'number' ? 12 : 'TMC-E';
+          }
+        }
       });
     });
 
-    mockData['p1_1'] = 13.5;
     return mockData;
   }
 }

@@ -13,10 +13,10 @@
     <!-- Quick Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
 
-        <!-- Active Projects -->
+        <!-- Active Drafts -->
         <div class="modern-card p-6 flex flex-col justify-between h-32 hover:border-blue-400 cursor-default">
             <div class="flex justify-between items-start">
-                <span class="text-slate-500 font-medium text-sm uppercase">Active Projects</span>
+                <span class="text-slate-500 font-medium text-sm uppercase">Active Drafts</span>
                 <div class="p-2 bg-blue-50 text-blue-600 rounded-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -24,24 +24,23 @@
                     </svg>
                 </div>
             </div>
-            <div class="text-3xl font-bold text-slate-800">{{ dataService.drafts.length }}</div>
+            <div class="text-3xl font-bold text-slate-800">{{ activeProjectsCount }}</div>
         </div>
 
-        <!-- Pending Validations -->
-        <div class="modern-card p-6 flex flex-col justify-between h-32 hover:border-yellow-400 cursor-default">
+        <!-- Completed Projects -->
+        <div class="modern-card p-6 flex flex-col justify-between h-32 hover:border-emerald-400 cursor-default">
             <div class="flex justify-between items-start">
-                <span class="text-slate-500 font-medium text-sm uppercase">Running Simulations</span>
-                <div class="p-2 bg-yellow-50 text-yellow-600 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                <span class="text-slate-500 font-medium text-sm uppercase">Completed Projects</span>
+                <div class="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
                     </svg>
                 </div>
             </div>
             <div class="text-3xl font-bold text-slate-800">
-                {{ runningDraftsCount }}
+                {{ completedProjectsCount }}
             </div>
         </div>
 

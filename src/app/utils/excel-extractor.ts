@@ -281,16 +281,19 @@ export class ExcelExtractor {
           unit = String(row[cFirst + 1] || '').trim();
         }
 
+        const lowerName = text.toLowerCase();
+        const isCurve = lowerName.includes('charac') || lowerName.includes('curve') || lowerName.includes('profile');
+
         currentGroup.parameters.push({
           id: this.generateId(text),
           name: text,
           unit: unit || '',
-          type: typeof val === 'number' ? 'number' : 'text',
+          type: isCurve ? 'curve' : (typeof val === 'number' ? 'number' : 'text'),
           defaultValue: val,
           userComment: '',
           checkStatus: '',
-          // NEW: keep "mandatoryStatus default optional" from new version
-          mandatoryStatus: 'optional'
+          // NEW: Prototype random mandatoryStatus
+          mandatoryStatus: ['mandatory', 'semi-mandatory', 'optional', 'irrelevant'][Math.floor(Math.random() * 4)] as any
         } as any);
       }
     }
@@ -409,15 +412,18 @@ export class ExcelExtractor {
       const comment = this.cellToString(row, fixedCols.commentCol);
       const check = this.normalizeCheckStatus(this.cellToString(row, fixedCols.checkCol));
 
+      const lowerName = paramName.toLowerCase();
+      const isCurve = lowerName.includes('charac') || lowerName.includes('curve') || lowerName.includes('profile');
+
       currentGroup.parameters.push({
         id: this.generateId(paramName),
         name: paramName,
         unit: unit || '',
-        type: 'text',
+        type: isCurve ? 'curve' : 'text',
         userComment: comment || '',
         checkStatus: check || '',
-        // NEW: keep default mandatoryStatus optional (if your ParameterRow has it)
-        mandatoryStatus: 'optional'
+        // NEW: Prototype random mandatoryStatus
+        mandatoryStatus: ['mandatory', 'semi-mandatory', 'optional', 'irrelevant'][Math.floor(Math.random() * 4)] as any
       } as any);
     }
 
