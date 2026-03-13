@@ -45,6 +45,20 @@ export interface ParameterValue {
   trustLevel?: TrustLevel; // origin label (shown when filled)
 }
 
+export interface CurvePoint {
+  x: number;
+  y: number;
+  label?: string;
+}
+
+export interface CurveValue {
+  xLabel: string;
+  yLabel: string;
+  xUnit?: string;
+  yUnit?: string;
+  points: CurvePoint[];
+}
+
 /**
  * Represents a single product variant (e.g., Variant A, Variant B).
  */

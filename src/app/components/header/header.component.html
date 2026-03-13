@@ -17,8 +17,16 @@
     </div>
 
     <div class="flex items-center gap-6">
-        <!-- Links / Role -->
-
+        <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Role</span>
+            <select
+                [ngModel]="selectedRole"
+                (ngModelChange)="onRoleChange($event)"
+                class="h-9 min-w-[220px] rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                <option [ngValue]="null" disabled>Select role</option>
+                <option *ngFor="let role of roles" [ngValue]="role.value">{{ role.label }}</option>
+            </select>
+        </div>
 
         <div class="flex items-center gap-4">
             <img src="assets/bosch-logo.svg" alt="Bosch" class="h-14 w-auto" />

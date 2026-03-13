@@ -1,5 +1,5 @@
 import { normalizeText, tokenSetRatio } from './text-norm';
-import { ParameterGroup, ParameterRow } from '../services/data.service';
+import { CurvePoint, CurveValue, ParameterGroup, ParameterRow } from '../services/data.service';
 import { utils } from 'xlsx';
 
 export interface ExtractedValue {
@@ -19,6 +19,28 @@ export interface ExtractedRowValues {
   labelCol: number;
 }
 
+interface CurveBlockConfig {
+  title: string;
+  groupName: string;
+  xHeaderRowOffset: number;
+  xDataStartRowOffset: number;
+  yHeaderRowOffset?: number;
+  yDataStartRowOffset?: number;
+  rowMarkerCol: number;
+  rowMarkerPattern: string;
+  xValueCol: number;
+  yValueCol: number;
+  xValuesByVariant?: boolean;
+  yValuesByVariant?: boolean;
+}
+
+interface CurveDataRow {
+  lineLabel: string;
+  baseValue: any;
+  values: Map<number, any>;
+  unit: string;
+}
+
 /**
  * ExcelExtractor (merged):
  * - Keeps OLD robust matching + label/value heuristics + matrix parsing + project description extraction
@@ -27,6 +49,86 @@ export interface ExtractedRowValues {
  */
 export class ExcelExtractor {
   private rawData: any[][];
+  private curveBlockConfigs: CurveBlockConfig[] = [
+    {
+      title: 'pV Curve of one front wheel',
+      groupName: 'pV Curves (wheel and brake tubes from hydraulic unit to wheel brakes)',
+      xHeaderRowOffset: 1,
+      xDataStartRowOffset: 2,
+      rowMarkerCol: 5,
+      rowMarkerPattern: '^check$',
+      xValueCol: 6,
+      yValueCol: 7,
+      xValuesByVariant: false,
+      yValuesByVariant: true
+    },
+    {
+      title: 'pV Curve of one rear wheel',
+      groupName: 'pV Curves (wheel and brake tubes from hydraulic unit to wheel brakes)',
+      xHeaderRowOffset: 1,
+      xDataStartRowOffset: 2,
+      rowMarkerCol: 5,
+      rowMarkerPattern: '^check$',
+      xValueCol: 6,
+      yValueCol: 7,
+      xValuesByVariant: false,
+      yValuesByVariant: true
+    },
+    {
+      title: 'PV Curve of peripherals: DPB<->ESP connection line only',
+      groupName: 'pV Curves (wheel and brake tubes from hydraulic unit to wheel brakes)',
+      xHeaderRowOffset: 1,
+      xDataStartRowOffset: 2,
+      rowMarkerCol: 5,
+      rowMarkerPattern: '^check$',
+      xValueCol: 6,
+      yValueCol: 7,
+      xValuesByVariant: false,
+      yValuesByVariant: true
+    },
+    {
+      title: 'PFS curve',
+      groupName: 'Pedal Feel Characteristics - IPB / DPB (details)',
+      xHeaderRowOffset: 2,
+      xDataStartRowOffset: 3,
+      yHeaderRowOffset: 19,
+      yDataStartRowOffset: 20,
+      rowMarkerCol: 6,
+      rowMarkerPattern: '^line\\s+\\d+',
+      xValueCol: 7,
+      yValueCol: 7,
+      xValuesByVariant: true,
+      yValuesByVariant: true
+    },
+    {
+      title: 'DBR Curve',
+      groupName: 'Pedal Feel Characteristics - IPB / DPB (details)',
+      xHeaderRowOffset: 2,
+      xDataStartRowOffset: 3,
+      yHeaderRowOffset: 19,
+      yDataStartRowOffset: 20,
+      rowMarkerCol: 6,
+      rowMarkerPattern: '^line\\s+\\d+',
+      xValueCol: 7,
+      yValueCol: 7,
+      xValuesByVariant: true,
+      yValuesByVariant: true
+    },
+    {
+      title: 'True pedal feel curve',
+      groupName: 'Pedal Feel Characteristics - IPB / DPB (details)',
+      xHeaderRowOffset: 2,
+      xDataStartRowOffset: 3,
+      yHeaderRowOffset: 19,
+      yDataStartRowOffset: 20,
+      rowMarkerCol: 6,
+      rowMarkerPattern: '^line\\s+\\d+',
+      xValueCol: 7,
+      yValueCol: 7,
+      xValuesByVariant: true,
+      yValuesByVariant: true
+    }
+  ];
 
   // === Old robust constants (kept) ===
   private static readonly MIN_MATCH_SCORE = 88;
@@ -404,6 +506,7 @@ export class ExcelExtractor {
 
       const paramName = this.readParamNameFromRow(row, fixedCols.paramCol);
       if (!paramName) continue;
+      if (this.isCurveSectionTitle(paramName)) continue;
 
       const norm = normalizeText(paramName, 'strong');
       if (!norm || ExcelExtractor.GARBAGE_LABELS.has(norm)) continue;
@@ -481,7 +584,222 @@ export class ExcelExtractor {
       }
     }
 
+    this.injectCurveParameters(groups, variants, cleanColEntries);
+
     return { parameterGroups: groups, variants };
+  }
+
+  private injectCurveParameters(
+    groups: ParameterGroup[],
+    variants: { id: string; name: string; values: Record<string, any> }[],
+    cleanColEntries: Array<{ col: number; name: string }>
+  ): void {
+    for (const config of this.curveBlockConfigs) {
+      const titleRow = this.findTitleRow(config.title);
+      if (titleRow < 0) continue;
+
+      const parameter = this.ensureCurveParameter(groups, config);
+      const seriesByColumn = this.extractCurveBlockSeries(titleRow, config, cleanColEntries);
+
+      cleanColEntries.forEach((entry, index) => {
+        const variant = variants[index];
+        const curveValue = seriesByColumn.get(entry.col);
+        if (curveValue && curveValue.points.length > 0) {
+          variant.values[parameter.id] = curveValue;
+        }
+      });
+    }
+  }
+
+  private ensureCurveParameter(groups: ParameterGroup[], config: CurveBlockConfig): ParameterRow {
+    let group = groups.find(g => normalizeText(g.groupName, 'strong') === normalizeText(config.groupName, 'strong'));
+    if (!group) {
+      group = { groupName: config.groupName, parameters: [] };
+      groups.push(group);
+    }
+
+    const existing = group.parameters.find(p => normalizeText(p.name, 'strong') === normalizeText(config.title, 'strong'));
+    if (existing) {
+      existing.type = 'curve';
+      return existing;
+    }
+
+    const parameter: ParameterRow = {
+      id: this.generateId(config.title),
+      name: config.title,
+      unit: '',
+      type: 'curve',
+      userComment: '',
+      checkStatus: '',
+      mandatoryStatus: 'mandatory'
+    };
+
+    group.parameters.push(parameter);
+    return parameter;
+  }
+
+  private extractCurveBlockSeries(
+    titleRow: number,
+    config: CurveBlockConfig,
+    cleanColEntries: Array<{ col: number; name: string }>
+  ): Map<number, CurveValue> {
+    const xHeaderRow = titleRow + config.xHeaderRowOffset;
+    const xDataStartRow = titleRow + config.xDataStartRowOffset;
+    const yHeaderRow = titleRow + (config.yHeaderRowOffset ?? config.xHeaderRowOffset);
+    const yDataStartRow = titleRow + (config.yDataStartRowOffset ?? config.xDataStartRowOffset);
+
+    const xLabel = config.xValueCol > 6
+      ? (this.readRowTitle(xHeaderRow, config.xValueCol) || 'X')
+      : (this.readCurveAxisLabel(xHeaderRow, config.xValueCol) || 'X');
+    const yLabel = config.yHeaderRowOffset !== undefined
+      ? (this.readRowTitle(yHeaderRow, 7) || 'Y')
+      : (this.readCurveAxisLabel(xHeaderRow, 22) || 'Y');
+
+    const xRows = this.readCurveRows(xDataStartRow, cleanColEntries, config.rowMarkerCol, config.rowMarkerPattern, config.xValueCol);
+    const yRows = config.yHeaderRowOffset !== undefined
+      ? this.readCurveRows(yDataStartRow, cleanColEntries, config.rowMarkerCol, config.rowMarkerPattern, config.yValueCol)
+      : this.readCurveRows(xDataStartRow, cleanColEntries, config.rowMarkerCol, config.rowMarkerPattern, config.yValueCol);
+
+    const xUnit = this.extractCurveUnit(xRows);
+    const yUnit = this.extractCurveUnit(yRows);
+
+    const results = new Map<number, CurveValue>();
+
+    for (const variantEntry of cleanColEntries) {
+      const points = this.buildCurvePointsForVariant(
+        xRows,
+        yRows,
+        variantEntry.col,
+        config.xValuesByVariant !== false,
+        config.yValuesByVariant !== false
+      );
+      if (points.length === 0) continue;
+
+      results.set(variantEntry.col, {
+        xLabel,
+        yLabel,
+        xUnit,
+        yUnit,
+        points
+      });
+    }
+
+    return results;
+  }
+
+  private buildCurvePointsForVariant(
+    xRows: CurveDataRow[],
+    yRows: CurveDataRow[],
+    variantCol: number,
+    xValuesByVariant: boolean,
+    yValuesByVariant: boolean
+  ): CurvePoint[] {
+    const points: CurvePoint[] = [];
+    const rowCount = Math.min(xRows.length, yRows.length);
+
+    for (let i = 0; i < rowCount; i++) {
+      const x = this.toNumericValue(xValuesByVariant ? (xRows[i].values.get(variantCol) ?? xRows[i].baseValue) : xRows[i].baseValue);
+      const y = this.toNumericValue(yValuesByVariant ? (yRows[i].values.get(variantCol) ?? yRows[i].baseValue) : yRows[i].baseValue);
+
+      if (x === null || y === null) continue;
+
+      points.push({
+        x,
+        y,
+        label: xRows[i].lineLabel || yRows[i].lineLabel
+      });
+    }
+
+    return points;
+  }
+
+  private findTitleRow(title: string): number {
+    const target = normalizeText(title, 'strong');
+
+    for (let r = 0; r < this.rawData.length; r++) {
+      const row = this.rawData[r] || [];
+      for (let c = 0; c < row.length; c++) {
+        const cell = row[c];
+        if (!cell) continue;
+        if (normalizeText(String(cell), 'strong') === target) {
+          return r;
+        }
+      }
+    }
+
+    return -1;
+  }
+
+  private isCurveSectionTitle(value: string): boolean {
+    const normalized = normalizeText(value, 'strong');
+    return this.curveBlockConfigs.some(config => normalizeText(config.title, 'strong') === normalized)
+      || this.curveBlockConfigs.some(config => normalizeText(config.groupName, 'strong') === normalized);
+  }
+
+  private readCurveAxisLabel(rowIndex: number, colIndex: number): string {
+    const value = this.rawData[rowIndex]?.[colIndex - 1];
+    return value ? String(value).trim() : '';
+  }
+
+  private readRowTitle(rowIndex: number, preferredCol: number): string {
+    const row = this.rawData[rowIndex] || [];
+    const preferred = row[preferredCol - 1];
+    if (preferred) return String(preferred).trim();
+
+    for (const cell of row) {
+      if (cell !== undefined && cell !== null && String(cell).trim() !== '') {
+        return String(cell).trim();
+      }
+    }
+
+    return '';
+  }
+
+  private extractCurveUnit(rows: CurveDataRow[]): string {
+    for (const row of rows) {
+      if (row.unit) return row.unit;
+    }
+    return '';
+  }
+
+  private readCurveRows(
+    startRow: number,
+    cleanColEntries: Array<{ col: number; name: string }>,
+    rowMarkerCol: number,
+    rowMarkerPattern: string,
+    dataValueCol: number
+  ): CurveDataRow[] {
+    const rows: CurveDataRow[] = [];
+    const markerRegex = new RegExp(rowMarkerPattern, 'i');
+
+    for (let r = startRow; r < this.rawData.length; r++) {
+      const row = this.rawData[r] || [];
+      const lineLabel = this.cellToString(row, rowMarkerCol - 1);
+      if (!markerRegex.test(lineLabel)) {
+        if (rows.length > 0) break;
+        continue;
+      }
+
+      const unit = this.cellToString(row, 21);
+      const baseValue = row[dataValueCol - 1];
+      const values = new Map<number, any>();
+
+      for (const entry of cleanColEntries) {
+        values.set(entry.col, row[entry.col]);
+      }
+
+      rows.push({ lineLabel, baseValue, values, unit });
+    }
+
+    return rows;
+  }
+
+  private toNumericValue(value: any): number | null {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+
+    const parsed = Number(String(value).replace(',', '.').trim());
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private readParamNameFromRow(row: any[], paramCol: number | null): string {

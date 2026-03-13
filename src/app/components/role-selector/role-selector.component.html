@@ -1,0 +1,20 @@
+<section class="w-full max-w-4xl mx-auto px-6 py-10">
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-8">
+    <div class="mb-8">
+      <h2 class="text-2xl font-bold text-slate-900">Select Prototype Role</h2>
+      <p class="text-slate-500 mt-2">Login is not connected yet. Choose a role to continue.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <button
+        *ngFor="let role of roles"
+        type="button"
+        (click)="selectRole(role.value)"
+        class="text-left border border-slate-200 rounded-xl p-5 hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
+      >
+        <div class="text-base font-bold text-slate-800">{{ role.label }}</div>
+        <div class="text-sm text-slate-500 mt-1">{{ role.description }}</div>
+      </button>
+    </div>
+  </div>
+</section>

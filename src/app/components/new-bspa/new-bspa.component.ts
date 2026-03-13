@@ -5,8 +5,9 @@ import { Component, ElementRef, NgZone, OnInit, ViewChild } from '@angular/core'
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DataService, ParameterValue, WorkflowStep, TrustLevel } from '../../services/data.service';
+import { DataService, ParameterRow, ParameterValue, WorkflowStep, TrustLevel } from '../../services/data.service';
 import { MambaService, MambaResult } from '../../services/mamba.service';
+import { RoleFeature, RoleService } from '../../services/role.service';
 import { read, utils } from 'xlsx';
 import { ExcelExtractor } from '../../utils/excel-extractor';
 import { MOCK_RESULTS_DATA } from '../../utils/mock-results.data';
@@ -36,11 +37,16 @@ export class NewBspaComponent implements OnInit {
 
   constructor(
     public dataService: DataService,
+    public roleService: RoleService,
     private mambaService: MambaService,
     private route: ActivatedRoute,
     private router: Router,
     private zone: NgZone // ✅ FIX: injected properly
   ) { }
+
+  can(feature: RoleFeature): boolean {
+    return this.roleService.can(feature);
+  }
 
   ngOnInit(): void {
     this.dataService.currentWorkflowStep$.subscribe(step => {
@@ -115,6 +121,7 @@ export class NewBspaComponent implements OnInit {
   }
 
   nextStep() {
+    if (!this.can('manual_entry')) return;
     if (this.currentStep === 'CUSTOMER_DATA') {
       this.hasUploadedInputSheet = false;
       this.dataService.projectData.epcNumber = this.epcNumber;
@@ -171,6 +178,7 @@ export class NewBspaComponent implements OnInit {
   }
 
   updateParamValue(paramId: string, newValue: any) {
+    if (!this.can('edit_parameter_values')) return;
     if (this.dataService.variants.length === 0) return;
 
     const variantId = this.dataService.variants[0].id;
@@ -196,6 +204,7 @@ export class NewBspaComponent implements OnInit {
   }
 
   autofillDefaults() {
+    if (!this.can('autofill_defaults')) return;
     const v = this.dataService.variants[0];
     if (!v) return;
 
@@ -220,10 +229,43 @@ export class NewBspaComponent implements OnInit {
   ];
 
   updateTrustLevel(paramId: string, trustLevel: TrustLevel) {
+    if (!this.can('edit_trust_level')) return;
     if (this.dataService.variants.length === 0) return;
     const existing = this.dataService.variants[0].values[paramId];
     if (!existing || existing.isMissing) return;
+
+    const currentTrust = existing.trustLevel ?? 'Not set';
+    const touchesDesignValue = currentTrust === 'Design value' || trustLevel === 'Design value';
+
+    if (touchesDesignValue && !this.can('toggle_design_value_lock')) return;
+    if (trustLevel === 'Design value' && !this.isDesignValueLockApplicable(paramId)) return;
+
     existing.trustLevel = trustLevel;
+  }
+
+  isTrustLevelSelectorDisabled(paramId: string, isMissing: boolean, currentTrustLevel?: TrustLevel): boolean {
+    if (isMissing || !this.can('edit_trust_level')) return true;
+    return currentTrustLevel === 'Design value' && !this.can('toggle_design_value_lock');
+  }
+
+  isDesignValueOptionDisabled(paramId: string): boolean {
+    if (!this.isDesignValueLockApplicable(paramId)) return true;
+    return !this.can('toggle_design_value_lock');
+  }
+
+  private isDesignValueLockApplicable(paramId: string): boolean {
+    const param = this.findParameter(paramId);
+    if (!param) return false;
+    if (param.type === 'curve') return false;
+    return param.mandatoryStatus === 'mandatory' || param.mandatoryStatus === 'semi-mandatory';
+  }
+
+  private findParameter(paramId: string): ParameterRow | undefined {
+    for (const group of this.dataService.parameterGroups) {
+      const match = group.parameters.find(p => p.id === paramId);
+      if (match) return match;
+    }
+    return undefined;
   }
 
   badgeLabel(value: any): string {
@@ -253,10 +295,12 @@ export class NewBspaComponent implements OnInit {
   }
 
   runAiEstimation() {
+    if (!this.can('ai_estimate')) return;
     this.dataService.estimateMissingValues();
   }
 
   saveAsDraft() {
+    if (!this.can('save_draft')) return;
     const newDraft: any = {
       id: 'd-' + Date.now(),
       name: this.epcNumber ? `EPC: ${this.epcNumber}` : 'Untitled Project',
@@ -271,6 +315,7 @@ export class NewBspaComponent implements OnInit {
   }
 
   startBspa() {
+    if (!this.can('start_bspa')) return;
     // Only allow starting if ALL parameters are fully filled (no missing values)
     const missingAny = this.dataService.parameterGroups.some(group =>
       group.parameters.some(p => this.isMissing(p.id))
@@ -297,10 +342,12 @@ export class NewBspaComponent implements OnInit {
   }
 
   uploadFile() {
+    if (!this.can('upload_input_sheet')) return;
     this.fileInputRef?.nativeElement.click();
   }
 
   onFileSelected(event: Event) {
+    if (!this.can('upload_input_sheet')) return;
     const input = event.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
 

@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { RouterModule, Router } from '@angular/router';
 import { DataService } from '../../services/data.service';
+import { RoleFeature, RoleService } from '../../services/role.service';
 
 @Component({
     selector: 'app-sidebar',
@@ -18,7 +18,7 @@ import { DataService } from '../../services/data.service';
             Main Functions
         </div>
 
-        <a (click)="forceNew()" routerLink="/new" routerLinkActive="bg-blue-50 text-blue-600 border-blue-200"
+        <a *ngIf="can('access_new_workflow')" (click)="forceNew()" routerLink="/new" routerLinkActive="bg-blue-50 text-blue-600 border-blue-200"
            class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors border border-transparent group cursor-pointer">
             <div class="w-8 h-8 rounded-md bg-blue-100/50 text-blue-600 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-105 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -26,7 +26,7 @@ import { DataService } from '../../services/data.service';
             <span class="font-medium">New BSPA</span>
         </a>
 
-        <a routerLink="/minor" routerLinkActive="bg-cyan-50 text-cyan-600 border-cyan-200"
+        <a *ngIf="can('access_minor_workflow')" routerLink="/minor" routerLinkActive="bg-cyan-50 text-cyan-600 border-cyan-200"
            class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors border border-transparent group">
             <div class="w-8 h-8 rounded-md bg-cyan-100/50 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-100 group-hover:scale-105 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -34,7 +34,7 @@ import { DataService } from '../../services/data.service';
             <span class="font-medium">Running Change</span>
         </a>
 
-        <a routerLink="/check" routerLinkActive="bg-emerald-50 text-emerald-600 border-emerald-200"
+        <a *ngIf="can('access_status_check')" routerLink="/check" routerLinkActive="bg-emerald-50 text-emerald-600 border-emerald-200"
            class="flex items-center gap-3 px-3 py-3 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors border border-transparent group">
            <div class="w-8 h-8 rounded-md bg-emerald-100/50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-100 group-hover:scale-105 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -61,13 +61,22 @@ import { DataService } from '../../services/data.service';
   `
 })
 export class SidebarComponent {
-    constructor(private router: Router, private dataService: DataService) { }
+    constructor(
+        private router: Router,
+        private dataService: DataService,
+        public roleService: RoleService
+    ) { }
+
+    can(feature: RoleFeature): boolean {
+        return this.roleService.can(feature);
+    }
 
     goToHome() {
         this.router.navigate(['/home']);
     }
 
     forceNew() {
+        if (!this.can('access_new_workflow')) return;
         this.dataService.resetProjectData();
     }
 }

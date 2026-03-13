@@ -146,12 +146,14 @@
 
           <!-- Autofill -->
           <button (click)="autofillDefaults()" title="Autofill Missing Fields"
+            [disabled]="!can('autofill_defaults')"
             class="h-11 px-6 rounded-md border border-slate-800 bg-[#fff1e0] hover:bg-[#ffe4c4] transition-colors flex flex-col items-center justify-center text-[13px] font-bold text-[#b95000] leading-tight min-w-[80px]">
             <span>Autofill</span>
           </button>
 
           <!-- AI Estimate -->
           <button (click)="runAiEstimation()" title="Estimate Missing Values"
+            [disabled]="!can('ai_estimate')"
             class="h-11 px-4 rounded-md border border-[#eadafb] bg-[#f4eaff] hover:bg-[#ebd8fa] transition-colors flex flex-col items-center justify-center text-[12px] font-bold text-[#7d3bba] leading-tight min-w-[80px]">
             <span>AI</span>
             <span>Estimate</span>
@@ -159,6 +161,7 @@
 
           <!-- Save Draft -->
           <button (click)="saveAsDraft()"
+            [disabled]="!can('save_draft')"
             class="h-11 px-4 rounded-md border border-slate-300 bg-white hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-[13px] font-bold text-slate-700 leading-tight min-w-[100px]">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -175,6 +178,7 @@
 
           <!-- Start BSPA -->
           <button (click)="startBspa()"
+            [disabled]="!can('start_bspa')"
             class="h-11 px-6 rounded-md bg-[#2563eb] hover:bg-blue-700 transition-all flex items-center justify-center gap-2 text-[14px] font-bold text-white leading-tight min-w-[120px]">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -255,6 +259,7 @@
                             <div class="relative w-full flex justify-end">
                               <input type="text" [ngModel]="v.values[param.id]?.value"
                                 (ngModelChange)="updateParamValue(param.id, $event, v.id)"
+                                [disabled]="!can('edit_parameter_values')"
                                 class="bg-white border text-[12px] rounded-md px-2 py-1.5 w-full max-w-[100px] focus:ring-2 focus:outline-none transition-all shadow-sm font-medium text-right text-slate-800 placeholder:text-slate-400"
                                 [ngClass]="{
                                 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100': isMissingForVariant(v.id, param.id),
@@ -279,10 +284,11 @@
                             <div class="w-full flex justify-end">
                               <select [ngModel]="v.values[param.id]?.trustLevel || 'Not set'"
                                 (ngModelChange)="updateTrustLevel(param.id, $event, v.id)"
-                                [disabled]="isMissingForVariant(v.id, param.id)"
+                                [disabled]="isTrustLevelSelectorDisabled(param.id, isMissingForVariant(v.id, param.id), v.values[param.id]?.trustLevel)"
                                 class="bg-white border text-[10px] rounded-md px-2 py-1 w-full max-w-[140px] focus:ring-2 focus:outline-none transition-all shadow-sm text-right"
                                 [ngClass]="(v.values[param.id]?.trustLevel || 'Not set') === 'Not set' ? 'border-red-300 bg-red-50 text-red-700 focus:border-red-400 focus:ring-red-100' : 'border-slate-300 text-slate-700 focus:border-blue-500 focus:ring-blue-100'">
-                                <option *ngFor="let tl of trustLevelOptions" [ngValue]="tl">{{ tl }}</option>
+                                <option *ngFor="let tl of trustLevelOptions" [ngValue]="tl"
+                                  [disabled]="tl === 'Design value' && isDesignValueOptionDisabled(param.id)">{{ tl }}</option>
                               </select>
                             </div>
 
@@ -328,63 +334,140 @@
                       <ng-container *ngIf="param.type === 'curve'">
                         <td [attr.colspan]="dataService.variants.length + (epcNumber ? 1 : 0)"
                           class="p-4 align-middle pr-6">
-                          <div class="flex justify-end w-full">
-                            <div
-                              class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col items-center justify-center relative overflow-hidden w-full max-w-[600px] h-[250px]">
+                          <ng-container *ngIf="getCurveChart(param.id) as chart; else noCurveData">
+                            <div class="w-full">
+                              <div
+                                (click)="toggleCurveSelector(param.id)"
+                                class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col gap-3 relative overflow-hidden w-full cursor-pointer">
+                                <div class="flex items-start justify-between gap-4">
+                                  <div class="flex items-center gap-2">
+                                    <span class="bg-blue-50 text-blue-600 p-1 rounded">
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                      </svg>
+                                    </span>
+                                    <div>
+                                      <div class="text-[11px] font-black text-slate-400 uppercase tracking-widest">{{ param.name }}</div>
+                                      <div class="text-[11px] text-slate-500 mt-1">{{ chart.xLabel }} vs {{ chart.yLabel }}</div>
+                                    </div>
+                                  </div>
+                                  <div class="flex flex-col items-end gap-2">
+                                    <button type="button"
+                                      class="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                                      (click)="toggleCurveSelector(param.id); $event.stopPropagation()">
+                                      Variants
+                                    </button>
+                                    <div class="flex flex-wrap justify-end gap-3 text-[10px] font-semibold text-slate-600">
+                                      <div *ngFor="let series of chart.series" class="flex items-center gap-1.5">
+                                        <span class="inline-block h-2.5 w-2.5 rounded-full ring-2 ring-white"
+                                          [style.background]="series.color"></span>
+                                        <span [style.color]="series.color">{{ series.name }}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
 
-                              <!-- Header Overlay -->
-                              <div class="absolute top-3 left-4 flex items-center gap-2 z-10">
-                                <span class="bg-blue-50 text-blue-600 p-1 rounded">
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                                  </svg>
-                                </span>
-                                <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest">{{
-                                  param.name }}</span>
+                                <div *ngIf="isCurveSelectorOpen(param.id)"
+                                  class="absolute right-4 top-16 z-20 max-w-[320px] rounded-xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur"
+                                  (click)="$event.stopPropagation()">
+                                  <div class="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                    Select variants
+                                  </div>
+                                  <div class="flex flex-wrap gap-2">
+                                    <button *ngFor="let variant of dataService.variants"
+                                      type="button"
+                                      (click)="toggleCurveVariant(param.id, variant.id, $event)"
+                                      class="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-colors"
+                                      [style.background]="isCurveVariantVisible(param.id, variant.id) ? curveVariantTone(param.id, variant.id).bg : '#ffffff'"
+                                      [style.borderColor]="isCurveVariantVisible(param.id, variant.id) ? curveVariantTone(param.id, variant.id).border : '#e2e8f0'"
+                                      [style.color]="isCurveVariantVisible(param.id, variant.id) ? curveVariantTone(param.id, variant.id).text : '#64748b'">
+                                      <span class="inline-block h-2.5 w-2.5 rounded-full"
+                                        [style.background]="curveVariantColor(param.id, variant.id)"></span>
+                                      <span>{{ variant.name }}</span>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div class="flex w-full flex-col gap-5 xl:flex-row xl:items-start">
+                                  <div class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-3">
+                                    <svg class="w-full h-[260px]" viewBox="0 0 500 240">
+                                      <g stroke="#e2e8f0" stroke-width="1">
+                                        <line x1="52" y1="200" x2="460" y2="200" />
+                                        <line x1="52" y1="48" x2="52" y2="200" />
+                                      </g>
+
+                                      <g stroke="#f1f5f9" stroke-width="1">
+                                        <line *ngFor="let tick of chart.xTicks" [attr.x1]="axisX(tick, chart.xTicks)"
+                                          [attr.y1]="48" [attr.x2]="axisX(tick, chart.xTicks)" [attr.y2]="200" />
+                                        <line *ngFor="let tick of chart.yTicks" x1="52"
+                                          [attr.y1]="axisY(tick, chart.yTicks)" x2="460" [attr.y2]="axisY(tick, chart.yTicks)" />
+                                      </g>
+
+                                      <g *ngFor="let series of chart.series">
+                                        <polyline [attr.points]="series.path" fill="none" [attr.stroke]="series.color"
+                                          stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+                                        <g *ngFor="let point of series.points">
+                                          <circle [attr.cx]="axisX(point.x, chart.xTicks)" [attr.cy]="axisY(point.y, chart.yTicks)"
+                                            r="3.2" [attr.fill]="series.color" stroke="#ffffff" stroke-width="1.2" />
+                                        </g>
+                                      </g>
+
+                                      <g fill="#64748b" font-size="9" font-weight="600">
+                                        <text *ngFor="let tick of chart.xTicks" [attr.x]="axisX(tick, chart.xTicks)"
+                                          y="216" text-anchor="middle">{{ formatTick(tick) }}</text>
+                                        <text *ngFor="let tick of chart.yTicks" x="44"
+                                          [attr.y]="axisY(tick, chart.yTicks) + 3" text-anchor="end">{{ formatTick(tick) }}</text>
+                                      </g>
+
+                                      <g fill="#334155" font-size="10" font-weight="700">
+                                        <text x="256" y="232" text-anchor="middle">{{ chart.xLabel }}</text>
+                                        <text x="16" y="124" text-anchor="middle" transform="rotate(-90, 16, 124)">{{ chart.yLabel }}</text>
+                                      </g>
+                                    </svg>
+                                  </div>
+
+                                  <div class="w-full rounded-xl border border-slate-200 bg-slate-50/80 p-3 xl:w-[640px] xl:flex-shrink-0">
+                                    <div class="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                      Excel values
+                                    </div>
+                                    <div *ngIf="getCurveMatrix(param.id) as matrix" class="max-h-[260px] overflow-auto rounded-lg border border-slate-300 bg-white">
+                                      <div class="grid text-[10px] font-bold text-slate-600"
+                                        [style.grid-template-columns]="'120px 110px repeat(' + matrix.variants.length + ', minmax(110px, 1fr))'">
+                                        <div class="border-b border-r border-slate-300 bg-slate-100 px-2 py-2 uppercase tracking-wide">Parametercheck</div>
+                                        <div class="border-b border-r border-slate-300 bg-slate-100 px-2 py-2">{{ matrix.xLabel }}</div>
+                                        <div *ngFor="let variant of matrix.variants"
+                                          class="border-b border-r border-slate-300 bg-slate-100 px-2 py-2 text-[10px] font-bold"
+                                          [style.color]="variant.color">
+                                          {{ variant.name }}
+                                        </div>
+
+                                        <ng-container *ngFor="let row of matrix.rows">
+                                          <div class="border-b border-r border-slate-300 bg-white px-2 py-2 text-[11px] text-slate-600">
+                                            {{ row.label }}
+                                          </div>
+                                          <div class="border-b border-r border-slate-300 bg-[#ffd11a] px-2 py-2 font-mono text-[11px] text-slate-800">
+                                            {{ row.x }}
+                                          </div>
+                                          <div *ngFor="let variant of matrix.variants"
+                                            class="border-b border-r border-slate-300 bg-[#ffd11a] px-2 py-2 font-mono text-[11px] text-slate-800">
+                                            {{ row.values[variant.id] }}
+                                          </div>
+                                        </ng-container>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-
-                              <!-- Full Size Pedal Feel Curve Chart -->
-                              <svg class="w-full h-full" viewBox="0 0 500 240">
-                                <defs>
-                                  <marker id="arrow-f" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4"
-                                    markerHeight="4" orient="auto-start-reverse">
-                                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569" />
-                                  </marker>
-                                </defs>
-
-                                <!-- Axes -->
-                                <path d="M 40,210 L 460,210" fill="none" stroke="#94a3b8" stroke-width="1.5" />
-                                <path d="M 250,210 L 250,20" fill="none" stroke="#94a3b8" stroke-width="1.5" />
-
-                                <!-- Grid Lines (Subtle) -->
-                                <g stroke="#f1f5f9" stroke-width="1">
-                                  <line x1="80" y1="40" x2="80" y2="210" />
-                                  <line x1="112" y1="110" x2="112" y2="210" />
-                                  <line x1="160" y1="160" x2="160" y2="210" />
-                                  <line x1="340" y1="160" x2="340" y2="210" />
-                                  <line x1="388" y1="110" x2="388" y2="210" />
-                                  <line x1="420" y1="40" x2="420" y2="210" />
-                                </g>
-
-                                <!-- Authentic Curve Path -->
-                                <path
-                                  d="M 80,40 C 85,80 95,100 112,110 C 130,135 145,150 160,160 C 190,175 210,185 220,185 L 245,185 L 250,200 L 255,185 L 280,185 C 290,185 310,175 340,160 C 355,150 370,135 388,110 C 405,100 415,80 420,40"
-                                  fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"
-                                  stroke-linejoin="round" />
-
-                                <!-- Key Annotations (Compact) -->
-                                <g fill="#64748b" font-size="10" font-weight="600">
-                                  <text x="250" y="225" text-anchor="middle">Travel</text>
-                                  <text x="35" y="115" text-anchor="end" transform="rotate(-90, 35, 115)">Force</text>
-
-                                  <text x="215" y="195" text-anchor="end" font-size="9" fill="#2563eb">Jump-In</text>
-                                  <text x="90" y="60" text-anchor="start" font-size="9" fill="#1e293b">Run-out</text>
-                                  <text x="410" y="60" text-anchor="end" font-size="9" fill="#1e293b">Run-out</text>
-                                </g>
-                              </svg>
                             </div>
-                          </div>
+                          </ng-container>
+                          <ng-template #noCurveData>
+                            <div class="w-full">
+                              <div class="w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                                No curve data extracted from the uploaded sheet.
+                              </div>
+                            </div>
+                          </ng-template>
                         </td>
                       </ng-container>
 

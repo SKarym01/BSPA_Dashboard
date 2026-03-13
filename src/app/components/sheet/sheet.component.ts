@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { DataService, TrustLevel, WorkflowStep } from '../../services/data.service';
+import { CurveValue, DataService, ParameterRow, TrustLevel, WorkflowStep } from '../../services/data.service';
+import { RoleFeature, RoleService } from '../../services/role.service';
 
 @Component({
     selector: 'app-sheet',
@@ -11,6 +12,9 @@ import { DataService, TrustLevel, WorkflowStep } from '../../services/data.servi
     templateUrl: './sheet.component.html',
 })
 export class SheetComponent implements OnInit {
+    private readonly curvePalette = ['#2563eb', '#0f766e', '#dc2626', '#9333ea', '#ea580c', '#0891b2', '#4f46e5'];
+    activeCurveSelectorParamId: string | null = null;
+    private readonly selectedCurveVariants = new Map<string, Set<string>>();
     userRole: 'expert' | 'standard' = 'expert';
     epcNumber: string = '';
     epcValues: { [paramId: string]: any } = {};
@@ -26,7 +30,15 @@ export class SheetComponent implements OnInit {
         'From EPC',
     ];
 
-    constructor(public dataService: DataService, private router: Router) { }
+    constructor(
+        public dataService: DataService,
+        public roleService: RoleService,
+        private router: Router
+    ) { }
+
+    can(feature: RoleFeature): boolean {
+        return this.roleService.can(feature);
+    }
 
     ngOnInit(): void {
         this.dataService.updateWorkflowStep('INPUT_SHEET');
@@ -117,6 +129,7 @@ export class SheetComponent implements OnInit {
 
 
     updateParamValue(paramId: string, newValue: any, variantId?: string) {
+        if (!this.can('edit_parameter_values')) return;
         if (this.dataService.variants.length === 0) return;
 
         const targetId = variantId || this.dataService.variants[0].id;
@@ -152,6 +165,7 @@ export class SheetComponent implements OnInit {
     }
 
     updateTrustLevel(paramId: string, trustLevel: TrustLevel, variantId?: string) {
+        if (!this.can('edit_trust_level')) return;
         if (this.dataService.variants.length === 0) return;
 
         const targetId = variantId || this.dataService.variants[0].id;
@@ -161,7 +175,42 @@ export class SheetComponent implements OnInit {
         const existing = variant.values[paramId];
         if (!existing || existing.isMissing) return;
 
+        const currentTrust = existing.trustLevel ?? 'Not set';
+        const touchesDesignValue = currentTrust === 'Design value' || trustLevel === 'Design value';
+
+        if (touchesDesignValue && !this.can('toggle_design_value_lock')) return;
+        if (trustLevel === 'Design value' && !this.isDesignValueLockApplicable(paramId)) return;
+
         existing.trustLevel = trustLevel;
+    }
+
+    isTrustLevelSelectorDisabled(
+        paramId: string,
+        isMissing: boolean,
+        currentTrustLevel?: TrustLevel
+    ): boolean {
+        if (isMissing || !this.can('edit_trust_level')) return true;
+        return currentTrustLevel === 'Design value' && !this.can('toggle_design_value_lock');
+    }
+
+    isDesignValueOptionDisabled(paramId: string): boolean {
+        if (!this.isDesignValueLockApplicable(paramId)) return true;
+        return !this.can('toggle_design_value_lock');
+    }
+
+    private isDesignValueLockApplicable(paramId: string): boolean {
+        const param = this.findParameter(paramId);
+        if (!param) return false;
+        if (param.type === 'curve') return false;
+        return param.mandatoryStatus === 'mandatory' || param.mandatoryStatus === 'semi-mandatory';
+    }
+
+    private findParameter(paramId: string): ParameterRow | undefined {
+        for (const group of this.dataService.parameterGroups) {
+            const match = group.parameters.find(p => p.id === paramId);
+            if (match) return match;
+        }
+        return undefined;
     }
 
     badgeLabel(value: any): string {
@@ -191,6 +240,7 @@ export class SheetComponent implements OnInit {
     }
 
     autofillDefaults() {
+        if (!this.can('autofill_defaults')) return;
         const variants = this.dataService.variants;
         if (!variants.length) return;
 
@@ -212,10 +262,12 @@ export class SheetComponent implements OnInit {
     }
 
     runAiEstimation() {
+        if (!this.can('ai_estimate')) return;
         this.dataService.estimateMissingValues();
     }
 
     saveAsDraft() {
+        if (!this.can('save_draft')) return;
         const newDraft: any = {
             id: 'd-' + Date.now(),
             name: this.dataService.projectData.epcNumber ? `EPC: ${this.dataService.projectData.epcNumber}` : 'Untitled Project',
@@ -230,6 +282,7 @@ export class SheetComponent implements OnInit {
     }
 
     startBspa() {
+        if (!this.can('start_bspa')) return;
         const missingParams = this.dataService.validateForMamba();
         if (missingParams.length > 0) {
             alert('Please fill in the following MANDATORY (Red) fields before starting BSPA:\n\n- ' + missingParams.join('\n- '));
@@ -240,4 +293,209 @@ export class SheetComponent implements OnInit {
         this.dataService.updateWorkflowStep('INPUT_SHEET');
         this.router.navigate(['/new']);
     }
+
+    getCurveValue(variantId: string, paramId: string): CurveValue | null {
+        const variant = this.dataService.variants.find(v => v.id === variantId);
+        const value = variant?.values[paramId]?.value;
+        return this.isCurveValue(value) ? value : null;
+    }
+
+    getCurveChart(paramId: string): {
+        xLabel: string;
+        yLabel: string;
+        series: Array<{ id: string; name: string; color: string; path: string; pointCount: number; points: CurvePointView[] }>;
+        xTicks: number[];
+        yTicks: number[];
+    } | null {
+        const series = this.dataService.variants
+            .filter(variant => this.isCurveVariantVisible(paramId, variant.id))
+            .map(variant => {
+                const curve = this.getCurveValue(variant.id, paramId);
+                if (!curve || curve.points.length === 0) return null;
+                return {
+                    id: variant.id,
+                    name: variant.name,
+                    color: this.curveVariantColor(paramId, variant.id),
+                    curve
+                };
+            })
+            .filter((entry): entry is { id: string; name: string; color: string; curve: CurveValue } => entry !== null);
+
+        if (series.length === 0) return null;
+
+        const allPoints = series.flatMap(entry => entry.curve.points);
+        const xValues = allPoints.map(point => point.x);
+        const yValues = allPoints.map(point => point.y);
+
+        const xMin = Math.min(...xValues);
+        const xMax = Math.max(...xValues);
+        const yMin = Math.min(...yValues);
+        const yMax = Math.max(...yValues);
+
+        const xRange = xMax - xMin || 1;
+        const yRange = yMax - yMin || 1;
+
+        const projectX = (value: number) => 52 + ((value - xMin) / xRange) * 408;
+        const projectY = (value: number) => 200 - ((value - yMin) / yRange) * 152;
+
+        return {
+            xLabel: this.formatAxisLabel(series[0].curve.xLabel, series[0].curve.xUnit),
+            yLabel: this.formatAxisLabel(series[0].curve.yLabel, series[0].curve.yUnit),
+            series: series.map(entry => ({
+                id: entry.id,
+                name: entry.name,
+                color: entry.color,
+                path: entry.curve.points.map(point => `${projectX(point.x)},${projectY(point.y)}`).join(' '),
+                pointCount: entry.curve.points.length,
+                points: entry.curve.points.map(point => ({
+                    label: point.label ?? '',
+                    x: point.x,
+                    y: point.y
+                }))
+            })),
+            xTicks: this.buildTicks(xMin, xMax),
+            yTicks: this.buildTicks(yMin, yMax)
+        };
+    }
+
+    getCurveMatrix(paramId: string): {
+        xLabel: string;
+        yLabel: string;
+        variants: Array<{ id: string; name: string; color: string }>;
+        rows: Array<{ label: string; x: number | ''; values: Record<string, number | ''> }>;
+    } | null {
+        const visibleVariants = this.dataService.variants
+            .filter(variant => this.isCurveVariantVisible(paramId, variant.id))
+            .map(variant => ({
+                id: variant.id,
+                name: variant.name,
+                color: this.curveVariantColor(paramId, variant.id),
+                curve: this.getCurveValue(variant.id, paramId)
+            }))
+            .filter((variant): variant is { id: string; name: string; color: string; curve: CurveValue } => !!variant.curve);
+
+        if (visibleVariants.length === 0) return null;
+
+        const baseCurve = visibleVariants[0].curve;
+        const rowCount = Math.max(...visibleVariants.map(variant => variant.curve.points.length));
+
+        const rows: Array<{ label: string; x: number | ''; values: Record<string, number | ''> }> = Array.from({ length: rowCount }, (_, index) => {
+            const basePoint = baseCurve.points[index];
+            const values: Record<string, number | ''> = {};
+            const xValue = basePoint ? Number(basePoint.x) : NaN;
+
+            for (const variant of visibleVariants) {
+                const point = variant.curve.points[index];
+                values[variant.id] = point ? point.y : '';
+            }
+
+            return {
+                label: basePoint?.label || `${index + 1}`,
+                x: Number.isFinite(xValue) ? xValue : '',
+                values
+            };
+        });
+
+        return {
+            xLabel: this.formatAxisLabel(baseCurve.xLabel, baseCurve.xUnit),
+            yLabel: this.formatAxisLabel(baseCurve.yLabel, baseCurve.yUnit),
+            variants: visibleVariants.map(({ id, name, color }) => ({ id, name, color })),
+            rows
+        };
+    }
+
+    axisX(value: number, ticks: number[]): number {
+        const min = Math.min(...ticks);
+        const max = Math.max(...ticks);
+        const range = max - min || 1;
+        return 52 + ((value - min) / range) * 408;
+    }
+
+    axisY(value: number, ticks: number[]): number {
+        const min = Math.min(...ticks);
+        const max = Math.max(...ticks);
+        const range = max - min || 1;
+        return 200 - ((value - min) / range) * 152;
+    }
+
+    formatTick(value: number): string {
+        if (Math.abs(value) >= 100 || Number.isInteger(value)) return value.toFixed(0);
+        if (Math.abs(value) >= 10) return value.toFixed(1);
+        return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+    }
+
+    toggleCurveSelector(paramId: string): void {
+        this.activeCurveSelectorParamId = this.activeCurveSelectorParamId === paramId ? null : paramId;
+    }
+
+    isCurveSelectorOpen(paramId: string): boolean {
+        return this.activeCurveSelectorParamId === paramId;
+    }
+
+    toggleCurveVariant(paramId: string, variantId: string, event?: Event): void {
+        event?.stopPropagation();
+
+        const visibleVariants = this.getOrCreateVisibleCurveVariants(paramId);
+        if (visibleVariants.has(variantId)) {
+            if (visibleVariants.size === 1) return;
+            visibleVariants.delete(variantId);
+            return;
+        }
+
+        visibleVariants.add(variantId);
+    }
+
+    isCurveVariantVisible(paramId: string, variantId: string): boolean {
+        return this.getOrCreateVisibleCurveVariants(paramId).has(variantId);
+    }
+
+    curveVariantColor(paramId: string, variantId: string): string {
+        const index = this.dataService.variants.findIndex(variant => variant.id === variantId);
+        return this.curvePalette[(index >= 0 ? index : 0) % this.curvePalette.length];
+    }
+
+    curveVariantTone(paramId: string, variantId: string): { bg: string; border: string; text: string } {
+        const tones = [
+            { bg: '#dbeafe', border: '#93c5fd', text: '#1d4ed8' },
+            { bg: '#ccfbf1', border: '#5eead4', text: '#0f766e' },
+            { bg: '#fee2e2', border: '#fca5a5', text: '#b91c1c' },
+            { bg: '#f3e8ff', border: '#d8b4fe', text: '#7e22ce' },
+            { bg: '#ffedd5', border: '#fdba74', text: '#c2410c' },
+            { bg: '#cffafe', border: '#67e8f9', text: '#0e7490' },
+            { bg: '#e0e7ff', border: '#a5b4fc', text: '#4338ca' }
+        ];
+        const index = this.dataService.variants.findIndex(variant => variant.id === variantId);
+        return tones[(index >= 0 ? index : 0) % tones.length];
+    }
+
+    private buildTicks(min: number, max: number): number[] {
+        if (min === max) return [min, min + 1];
+        const tickCount = 5;
+        return Array.from({ length: tickCount }, (_, index) => min + ((max - min) / (tickCount - 1)) * index);
+    }
+
+    private formatAxisLabel(label: string, unit?: string): string {
+        const trimmedLabel = label.trim();
+        const trimmedUnit = (unit ?? '').trim();
+        return trimmedUnit ? `${trimmedLabel} ${trimmedUnit}` : trimmedLabel;
+    }
+
+    private isCurveValue(value: any): value is CurveValue {
+        return !!value && Array.isArray(value.points);
+    }
+
+    private getOrCreateVisibleCurveVariants(paramId: string): Set<string> {
+        let visibleVariants = this.selectedCurveVariants.get(paramId);
+        if (!visibleVariants) {
+            visibleVariants = new Set(this.dataService.variants.map(variant => variant.id));
+            this.selectedCurveVariants.set(paramId, visibleVariants);
+        }
+        return visibleVariants;
+    }
+}
+
+interface CurvePointView {
+    label: string;
+    x: number;
+    y: number;
 }
