@@ -4,6 +4,10 @@
   <app-header
     [roles]="roleService.roles"
     [selectedRole]="roleService.selectedRole"
+    [loginName]="userInfo.loginName"
+    [fullName]="userInfo.fullName"
+    [email]="userInfo.email"
+    [jobTitle]="userInfo.jobTitle"
     (navigateHome)="onNavigateHome()"
     (roleChanged)="onRoleSelected($event)"
   ></app-header>
@@ -13,7 +17,11 @@
     <div class="flex flex-1 relative">
 
       <!-- LEFT SIDEBAR -->
-      <app-sidebar></app-sidebar>
+      <app-sidebar
+        [loginName]="userInfo.loginName"
+        [fullName]="userInfo.fullName"
+        [email]="userInfo.email"
+      ></app-sidebar>
 
       <!-- CONTENT AREA -->
       <main class="flex-1 overflow-x-hidden min-h-[calc(100vh-4rem)] pt-16">

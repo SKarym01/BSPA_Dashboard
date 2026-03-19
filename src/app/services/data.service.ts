@@ -252,6 +252,31 @@ export class DataService {
     };
   }
 
+  estimateValueForField(variantId: string, paramId: string): boolean {
+    const variant = this.variants.find(v => v.id === variantId);
+    if (!variant) return false;
+
+    const param = this.parameterGroups
+      .flatMap(group => group.parameters)
+      .find(p => p.id === paramId);
+    if (!param || param.type === 'curve' || param.type === 'select') return false;
+
+    const currentVal = variant.values[paramId];
+    const isMissing = !currentVal || currentVal.value === '' || currentVal.value === undefined || currentVal.value === null;
+    if (!isMissing) return false;
+
+    const estimatedVal = this.buildEstimatedValue(param);
+    if (estimatedVal === null) return false;
+
+    variant.values[paramId] = {
+      value: estimatedVal,
+      source: 'Estimation',
+      isMissing: false,
+      trustLevel: 'Estimation',
+    };
+    return true;
+  }
+
   /**
    * Simulate AI Estimation for missing values
    * ✅ uses source: Estimation
@@ -260,26 +285,16 @@ export class DataService {
     this.variants.forEach((variant) => {
       this.parameterGroups.forEach((group) => {
         group.parameters.forEach((param) => {
-          const currentVal = variant.values[param.id];
-
-          if (!currentVal || currentVal.value === '' || currentVal.value === undefined || currentVal.value === null) {
-            let estimatedVal: any = null;
-
-            if (param.type === 'number') estimatedVal = (Math.random() * 50 + 10).toFixed(2);
-            if (param.type === 'text') estimatedVal = 'Estimated-Text';
-
-            if (estimatedVal !== null) {
-              variant.values[param.id] = {
-                value: estimatedVal,
-                source: 'Estimation',
-                isMissing: false,
-                trustLevel: 'Estimation',
-              };
-            }
-          }
+          this.estimateValueForField(variant.id, param.id);
         });
       });
     });
+  }
+
+  private buildEstimatedValue(param: ParameterRow): any {
+    if (param.type === 'number') return (Math.random() * 50 + 10).toFixed(2);
+    if (param.type === 'text') return 'Estimated-Text';
+    return null;
   }
 
   /**

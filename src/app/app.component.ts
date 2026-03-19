@@ -15,6 +15,12 @@ import { RoleService, UserRole } from './services/role.service';
   styleUrls: ['./app.component.scss'],
 })
 export class App {
+  readonly userInfo = {
+    loginName: 'kas9abt',
+    fullName: 'Shaam Karym',
+    email: 'shaam.karym@bosch.com',
+    jobTitle: 'Lead Engineer',
+  };
 
   constructor(
     private router: Router,
@@ -28,8 +34,12 @@ export class App {
   }
 
   onRoleSelected(role: UserRole) {
+    const hadRole = this.roleService.hasSelectedRole();
     this.roleService.selectRole(role);
-    this.dataService.resetProjectData();
-    this.router.navigate(['/home']);
+    // Preserve all in-memory project/sheet state while switching roles.
+    // Only first-time role selection routes to home.
+    if (!hadRole) {
+      this.router.navigate(['/home']);
+    }
   }
 }

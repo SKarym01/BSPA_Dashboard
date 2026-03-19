@@ -323,7 +323,8 @@
                                                     <input type="text"
                                                         [ngModel]="dataService.variants[0].values[param.id]?.value"
                                                         (ngModelChange)="updateParamValue(param.id, $event)"
-                                                        [disabled]="!can('edit_parameter_values')"
+                                                        (focus)="setActiveInput(param.id, dataService.variants[0].id)"
+                                                        [disabled]="!can('edit_parameter_values') || isValueLockedForCurrentRole(param.id, dataService.variants[0].id)"
                                                         class="bg-white border text-sm rounded-md px-3 py-2 w-full focus:ring-2 focus:outline-none transition-all shadow-sm font-medium"
                                                         [ngClass]="{
                                                         'border-red-500 focus:border-red-500 focus:ring-red-100 bg-red-50/30': isMissing(param.id) && param.mandatoryStatus === 'mandatory',
@@ -474,7 +475,7 @@
                         </svg>
                         Save Project
                     </button>
-                    <button *ngIf="can('export_results')"
+                    <button *ngIf="can('export_results')" (click)="exportResultsToExcel()"
                         class="px-5 py-2.5 rounded-lg border-2 border-emerald-200 bg-emerald-50 text-emerald-700 font-bold hover:bg-emerald-100 transition-all flex items-center gap-2">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

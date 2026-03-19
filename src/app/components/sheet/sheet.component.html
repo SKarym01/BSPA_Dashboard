@@ -259,7 +259,8 @@
                             <div class="relative w-full flex justify-end">
                               <input type="text" [ngModel]="v.values[param.id]?.value"
                                 (ngModelChange)="updateParamValue(param.id, $event, v.id)"
-                                [disabled]="!can('edit_parameter_values')"
+                                (focus)="setActiveInput(param.id, v.id)"
+                                [disabled]="!can('edit_parameter_values') || isValueLockedForCurrentRole(param.id, v.id)"
                                 class="bg-white border text-[12px] rounded-md px-2 py-1.5 w-full max-w-[100px] focus:ring-2 focus:outline-none transition-all shadow-sm font-medium text-right text-slate-800 placeholder:text-slate-400"
                                 [ngClass]="{
                                 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100': isMissingForVariant(v.id, param.id),
@@ -389,51 +390,63 @@
                                   </div>
                                 </div>
 
-                                <div class="flex w-full flex-col gap-5 xl:flex-row xl:items-start">
-                                  <div class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-3">
-                                    <svg class="w-full h-[260px]" viewBox="0 0 500 240">
+                                <div class="grid w-full gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(520px,1fr)] xl:items-start">
+                                  <div class="relative min-w-0 rounded-xl border border-slate-200 bg-white p-4">
+                                    <button type="button"
+                                      class="absolute right-4 top-4 z-10 rounded-md border border-slate-200 bg-white/95 p-2 text-slate-600 shadow-sm hover:bg-slate-50"
+                                      (click)="openCurveFullscreen(param.id, $event)"
+                                      aria-label="Open curve fullscreen">
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M15 3h6v6"></path>
+                                        <path d="M9 21H3v-6"></path>
+                                        <path d="M21 3l-7 7"></path>
+                                        <path d="M3 21l7-7"></path>
+                                      </svg>
+                                    </button>
+                                    <svg class="h-[340px] w-full" preserveAspectRatio="xMidYMid meet"
+                                      viewBox="0 0 960 390">
                                       <g stroke="#e2e8f0" stroke-width="1">
-                                        <line x1="52" y1="200" x2="460" y2="200" />
-                                        <line x1="52" y1="48" x2="52" y2="200" />
+                                        <line x1="78" y1="356" x2="902" y2="356" />
+                                        <line x1="78" y1="24" x2="78" y2="356" />
                                       </g>
 
                                       <g stroke="#f1f5f9" stroke-width="1">
                                         <line *ngFor="let tick of chart.xTicks" [attr.x1]="axisX(tick, chart.xTicks)"
-                                          [attr.y1]="48" [attr.x2]="axisX(tick, chart.xTicks)" [attr.y2]="200" />
-                                        <line *ngFor="let tick of chart.yTicks" x1="52"
-                                          [attr.y1]="axisY(tick, chart.yTicks)" x2="460" [attr.y2]="axisY(tick, chart.yTicks)" />
+                                          [attr.y1]="24" [attr.x2]="axisX(tick, chart.xTicks)" [attr.y2]="356" />
+                                        <line *ngFor="let tick of chart.yTicks" x1="78"
+                                          [attr.y1]="axisY(tick, chart.yTicks)" x2="902" [attr.y2]="axisY(tick, chart.yTicks)" />
                                       </g>
 
                                       <g *ngFor="let series of chart.series">
                                         <polyline [attr.points]="series.path" fill="none" [attr.stroke]="series.color"
-                                          stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+                                          stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
                                         <g *ngFor="let point of series.points">
                                           <circle [attr.cx]="axisX(point.x, chart.xTicks)" [attr.cy]="axisY(point.y, chart.yTicks)"
-                                            r="3.2" [attr.fill]="series.color" stroke="#ffffff" stroke-width="1.2" />
+                                            r="4" [attr.fill]="series.color" stroke="#ffffff" stroke-width="1.6" />
                                         </g>
                                       </g>
 
-                                      <g fill="#64748b" font-size="9" font-weight="600">
+                                      <g fill="#475569" font-size="14" font-weight="600">
                                         <text *ngFor="let tick of chart.xTicks" [attr.x]="axisX(tick, chart.xTicks)"
-                                          y="216" text-anchor="middle">{{ formatTick(tick) }}</text>
-                                        <text *ngFor="let tick of chart.yTicks" x="44"
+                                          y="376" text-anchor="middle">{{ formatTick(tick) }}</text>
+                                        <text *ngFor="let tick of chart.yTicks" x="66"
                                           [attr.y]="axisY(tick, chart.yTicks) + 3" text-anchor="end">{{ formatTick(tick) }}</text>
                                       </g>
 
-                                      <g fill="#334155" font-size="10" font-weight="700">
-                                        <text x="256" y="232" text-anchor="middle">{{ chart.xLabel }}</text>
-                                        <text x="16" y="124" text-anchor="middle" transform="rotate(-90, 16, 124)">{{ chart.yLabel }}</text>
+                                      <g fill="#334155" font-size="16" font-weight="700">
+                                        <text x="490" y="388" text-anchor="middle">{{ chart.xLabel }}</text>
+                                        <text x="26" y="190" text-anchor="middle" transform="rotate(-90, 26, 190)">{{ chart.yLabel }}</text>
                                       </g>
                                     </svg>
                                   </div>
 
-                                  <div class="w-full rounded-xl border border-slate-200 bg-slate-50/80 p-3 xl:w-[640px] xl:flex-shrink-0">
+                                  <div class="min-w-0 rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                                     <div class="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
                                       Excel values
                                     </div>
-                                    <div *ngIf="getCurveMatrix(param.id) as matrix" class="max-h-[260px] overflow-auto rounded-lg border border-slate-300 bg-white">
+                                    <div *ngIf="getCurveMatrix(param.id) as matrix" class="max-h-[420px] overflow-auto rounded-lg border border-slate-300 bg-white">
                                       <div class="grid text-[10px] font-bold text-slate-600"
-                                        [style.grid-template-columns]="'120px 110px repeat(' + matrix.variants.length + ', minmax(110px, 1fr))'">
+                                        [style.grid-template-columns]="curveGridTemplate(matrix.variants.length)">
                                         <div class="border-b border-r border-slate-300 bg-slate-100 px-2 py-2 uppercase tracking-wide">Parametercheck</div>
                                         <div class="border-b border-r border-slate-300 bg-slate-100 px-2 py-2">{{ matrix.xLabel }}</div>
                                         <div *ngFor="let variant of matrix.variants"
@@ -446,12 +459,24 @@
                                           <div class="border-b border-r border-slate-300 bg-white px-2 py-2 text-[11px] text-slate-600">
                                             {{ row.label }}
                                           </div>
-                                          <div class="border-b border-r border-slate-300 bg-[#ffd11a] px-2 py-2 font-mono text-[11px] text-slate-800">
-                                            {{ row.x }}
+                                          <div class="border-b border-r border-slate-300 bg-[#ffd11a] px-2 py-1">
+                                            <input
+                                              type="text"
+                                              [ngModel]="row.x"
+                                              (ngModelChange)="updateCurveXAxis(param.id, row.index, $event)"
+                                              (click)="$event.stopPropagation()"
+                                              [disabled]="!can('edit_parameter_values')"
+                                              class="w-full rounded border border-amber-300 bg-white px-2 py-1 font-mono text-[12px] text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                                           </div>
                                           <div *ngFor="let variant of matrix.variants"
-                                            class="border-b border-r border-slate-300 bg-[#ffd11a] px-2 py-2 font-mono text-[11px] text-slate-800">
-                                            {{ row.values[variant.id] }}
+                                            class="border-b border-r border-slate-300 bg-[#ffd11a] px-2 py-1">
+                                            <input
+                                              type="text"
+                                              [ngModel]="row.values[variant.id]"
+                                              (ngModelChange)="updateCurveYAxis(param.id, variant.id, row.index, $event)"
+                                              (click)="$event.stopPropagation()"
+                                              [disabled]="!can('edit_parameter_values')"
+                                              class="w-full rounded border border-amber-300 bg-white px-2 py-1 font-mono text-[12px] text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
                                           </div>
                                         </ng-container>
                                       </div>
@@ -483,4 +508,68 @@
     </section>
 
   </main>
+
+  <div *ngIf="activeFullscreenCurveParamId && getCurveChart(activeFullscreenCurveParamId) as fullscreenChart"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-6"
+    (click)="closeCurveFullscreen($event)">
+    <div class="w-full max-w-[1180px] rounded-2xl bg-white shadow-2xl"
+      (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <div>
+          <div class="text-sm font-black uppercase tracking-[0.22em] text-slate-400">
+            {{ curveParameterName(activeFullscreenCurveParamId) }}
+          </div>
+          <div class="mt-1 text-sm font-medium text-slate-600">
+            {{ fullscreenChart.xLabel }} vs {{ fullscreenChart.yLabel }}
+          </div>
+        </div>
+        <button type="button"
+          class="rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
+          (click)="closeCurveFullscreen($event)"
+          aria-label="Close fullscreen">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="p-5">
+        <svg class="h-[60vh] w-full" preserveAspectRatio="xMidYMid meet" viewBox="0 0 960 390">
+          <g stroke="#e2e8f0" stroke-width="1">
+            <line x1="78" y1="356" x2="902" y2="356" />
+            <line x1="78" y1="24" x2="78" y2="356" />
+          </g>
+
+          <g stroke="#f1f5f9" stroke-width="1">
+            <line *ngFor="let tick of fullscreenChart.xTicks" [attr.x1]="axisX(tick, fullscreenChart.xTicks)"
+              [attr.y1]="24" [attr.x2]="axisX(tick, fullscreenChart.xTicks)" [attr.y2]="356" />
+            <line *ngFor="let tick of fullscreenChart.yTicks" x1="78"
+              [attr.y1]="axisY(tick, fullscreenChart.yTicks)" x2="902" [attr.y2]="axisY(tick, fullscreenChart.yTicks)" />
+          </g>
+
+          <g *ngFor="let series of fullscreenChart.series">
+            <polyline [attr.points]="series.path" fill="none" [attr.stroke]="series.color"
+              stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+            <g *ngFor="let point of series.points">
+              <circle [attr.cx]="axisX(point.x, fullscreenChart.xTicks)" [attr.cy]="axisY(point.y, fullscreenChart.yTicks)"
+                r="4" [attr.fill]="series.color" stroke="#ffffff" stroke-width="1.6" />
+            </g>
+          </g>
+
+          <g fill="#475569" font-size="14" font-weight="600">
+            <text *ngFor="let tick of fullscreenChart.xTicks" [attr.x]="axisX(tick, fullscreenChart.xTicks)"
+              y="376" text-anchor="middle">{{ formatTick(tick) }}</text>
+            <text *ngFor="let tick of fullscreenChart.yTicks" x="66"
+              [attr.y]="axisY(tick, fullscreenChart.yTicks) + 3" text-anchor="end">{{ formatTick(tick) }}</text>
+          </g>
+
+          <g fill="#334155" font-size="16" font-weight="700">
+            <text x="490" y="388" text-anchor="middle">{{ fullscreenChart.xLabel }}</text>
+            <text x="26" y="190" text-anchor="middle" transform="rotate(-90, 26, 190)">{{ fullscreenChart.yLabel }}</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
 </div>

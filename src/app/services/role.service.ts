@@ -60,7 +60,7 @@ const ROLE_PERMISSIONS: PermissionMatrix = {
     toggle_design_value_lock: false,
     save_draft: true,
     start_bspa: true,
-    export_results: false,
+    export_results: true,
   },
 };
 

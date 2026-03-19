@@ -13,13 +13,37 @@ import { RoleFeature, RoleService } from '../../services/role.service';
 })
 export class SheetComponent implements OnInit {
     private readonly curvePalette = ['#2563eb', '#0f766e', '#dc2626', '#9333ea', '#ea580c', '#0891b2', '#4f46e5'];
+    private readonly chartBounds = {
+        left: 78,
+        right: 902,
+        top: 24,
+        bottom: 356,
+        width: 824,
+        height: 332,
+    };
     activeCurveSelectorParamId: string | null = null;
+    activeFullscreenCurveParamId: string | null = null;
     private readonly selectedCurveVariants = new Map<string, Set<string>>();
+    private readonly curveChartCache = new Map<string, {
+        xLabel: string;
+        yLabel: string;
+        series: Array<{ id: string; name: string; color: string; path: string; pointCount: number; points: CurvePointView[] }>;
+        xTicks: number[];
+        yTicks: number[];
+    } | null>();
+    private readonly curveMatrixCache = new Map<string, {
+        xLabel: string;
+        yLabel: string;
+        variants: Array<{ id: string; name: string; color: string }>;
+        rows: Array<{ index: number; label: string; x: number | ''; values: Record<string, number | ''> }>;
+    } | null>();
+    private curveCacheRevision = 0;
     userRole: 'expert' | 'standard' = 'expert';
     epcNumber: string = '';
     epcValues: { [paramId: string]: any } = {};
     currentStep: WorkflowStep = 'INPUT_SHEET';
     workflowSteps: WorkflowStep[] = ['CUSTOMER_DATA', 'INPUT_SHEET', 'MAMBA', 'RESULTS'];
+    private activeInputTarget: { paramId: string; variantId: string } | null = null;
 
     trustLevelOptions: TrustLevel[] = [
         'Not set',
@@ -46,6 +70,7 @@ export class SheetComponent implements OnInit {
             this.currentStep = step;
         });
         this.epcNumber = this.dataService.projectData.epcNumber || '';
+        this.expandImportedCurveGroups();
         if (this.epcNumber) this.loadEpcData();
     }
 
@@ -86,6 +111,31 @@ export class SheetComponent implements OnInit {
 
     isCurveExpanded(paramId: string): boolean {
         return this.expandedCurves.has(paramId);
+    }
+
+    openCurveFullscreen(paramId: string, event?: Event): void {
+        event?.stopPropagation();
+        this.activeFullscreenCurveParamId = paramId;
+    }
+
+    closeCurveFullscreen(event?: Event): void {
+        event?.stopPropagation();
+        this.activeFullscreenCurveParamId = null;
+    }
+
+    isCurveFullscreen(paramId: string): boolean {
+        return this.activeFullscreenCurveParamId === paramId;
+    }
+
+    private expandImportedCurveGroups(): void {
+        this.expandedCurves.clear();
+        for (const group of this.dataService.parameterGroups) {
+            for (const param of group.parameters) {
+                if (param.type === 'curve') {
+                    this.expandedCurves.add(param.id);
+                }
+            }
+        }
     }
 
     loadEpcData() {
@@ -133,6 +183,7 @@ export class SheetComponent implements OnInit {
         if (this.dataService.variants.length === 0) return;
 
         const targetId = variantId || this.dataService.variants[0].id;
+        if (this.isValueLockedForCurrentRole(paramId, targetId)) return;
         const variant = this.dataService.variants.find(v => v.id === targetId);
         if (!variant) return;
 
@@ -164,6 +215,12 @@ export class SheetComponent implements OnInit {
         }
     }
 
+    setActiveInput(paramId: string, variantId?: string): void {
+        const targetId = variantId || this.dataService.variants[0]?.id;
+        if (!targetId) return;
+        this.activeInputTarget = { paramId, variantId: targetId };
+    }
+
     updateTrustLevel(paramId: string, trustLevel: TrustLevel, variantId?: string) {
         if (!this.can('edit_trust_level')) return;
         if (this.dataService.variants.length === 0) return;
@@ -178,7 +235,7 @@ export class SheetComponent implements OnInit {
         const currentTrust = existing.trustLevel ?? 'Not set';
         const touchesDesignValue = currentTrust === 'Design value' || trustLevel === 'Design value';
 
-        if (touchesDesignValue && !this.can('toggle_design_value_lock')) return;
+        if (touchesDesignValue && !this.canEditDesignValue()) return;
         if (trustLevel === 'Design value' && !this.isDesignValueLockApplicable(paramId)) return;
 
         existing.trustLevel = trustLevel;
@@ -190,18 +247,31 @@ export class SheetComponent implements OnInit {
         currentTrustLevel?: TrustLevel
     ): boolean {
         if (isMissing || !this.can('edit_trust_level')) return true;
-        return currentTrustLevel === 'Design value' && !this.can('toggle_design_value_lock');
+        return currentTrustLevel === 'Design value' && !this.canEditDesignValue();
     }
 
     isDesignValueOptionDisabled(paramId: string): boolean {
         if (!this.isDesignValueLockApplicable(paramId)) return true;
-        return !this.can('toggle_design_value_lock');
+        return !this.canEditDesignValue();
+    }
+
+    isValueLockedForCurrentRole(paramId: string, variantId?: string): boolean {
+        const targetId = variantId || this.dataService.variants[0]?.id;
+        if (!targetId || this.roleService.selectedRole !== 'TPM_CUSTOMER_TEAM') return false;
+        const variant = this.dataService.variants.find(v => v.id === targetId);
+        const trust = variant?.values[paramId]?.trustLevel;
+        return trust === 'Design value';
+    }
+
+    private canEditDesignValue(): boolean {
+        return this.roleService.selectedRole === 'BSPA_COORDINATION' && this.can('toggle_design_value_lock');
     }
 
     private isDesignValueLockApplicable(paramId: string): boolean {
         const param = this.findParameter(paramId);
         if (!param) return false;
         if (param.type === 'curve') return false;
+        if (this.roleService.selectedRole === 'BSPA_COORDINATION') return true;
         return param.mandatoryStatus === 'mandatory' || param.mandatoryStatus === 'semi-mandatory';
     }
 
@@ -211,6 +281,10 @@ export class SheetComponent implements OnInit {
             if (match) return match;
         }
         return undefined;
+    }
+
+    curveParameterName(paramId: string): string {
+        return this.findParameter(paramId)?.name || paramId;
     }
 
     badgeLabel(value: any): string {
@@ -263,7 +337,17 @@ export class SheetComponent implements OnInit {
 
     runAiEstimation() {
         if (!this.can('ai_estimate')) return;
-        this.dataService.estimateMissingValues();
+        if (!this.activeInputTarget) {
+            alert('Please place the cursor in a field first.');
+            return;
+        }
+        const applied = this.dataService.estimateValueForField(
+            this.activeInputTarget.variantId,
+            this.activeInputTarget.paramId
+        );
+        if (!applied) {
+            alert('AI estimation only works for an empty text/number field.');
+        }
     }
 
     saveAsDraft() {
@@ -307,6 +391,11 @@ export class SheetComponent implements OnInit {
         xTicks: number[];
         yTicks: number[];
     } | null {
+        const cacheKey = this.curveCacheKey(paramId);
+        if (this.curveChartCache.has(cacheKey)) {
+            return this.curveChartCache.get(cacheKey) ?? null;
+        }
+
         const series = this.dataService.variants
             .filter(variant => this.isCurveVariantVisible(paramId, variant.id))
             .map(variant => {
@@ -321,7 +410,10 @@ export class SheetComponent implements OnInit {
             })
             .filter((entry): entry is { id: string; name: string; color: string; curve: CurveValue } => entry !== null);
 
-        if (series.length === 0) return null;
+        if (series.length === 0) {
+            this.curveChartCache.set(cacheKey, null);
+            return null;
+        }
 
         const allPoints = series.flatMap(entry => entry.curve.points);
         const xValues = allPoints.map(point => point.x);
@@ -335,12 +427,12 @@ export class SheetComponent implements OnInit {
         const xRange = xMax - xMin || 1;
         const yRange = yMax - yMin || 1;
 
-        const projectX = (value: number) => 52 + ((value - xMin) / xRange) * 408;
-        const projectY = (value: number) => 200 - ((value - yMin) / yRange) * 152;
+        const projectX = (value: number) => this.chartBounds.left + ((value - xMin) / xRange) * this.chartBounds.width;
+        const projectY = (value: number) => this.chartBounds.bottom - ((value - yMin) / yRange) * this.chartBounds.height;
 
-        return {
-            xLabel: this.formatAxisLabel(series[0].curve.xLabel, series[0].curve.xUnit),
-            yLabel: this.formatAxisLabel(series[0].curve.yLabel, series[0].curve.yUnit),
+        const chart = {
+            xLabel: this.formatAxisLabel(series[0].curve.xLabel),
+            yLabel: this.formatAxisLabel(series[0].curve.yLabel),
             series: series.map(entry => ({
                 id: entry.id,
                 name: entry.name,
@@ -356,14 +448,21 @@ export class SheetComponent implements OnInit {
             xTicks: this.buildTicks(xMin, xMax),
             yTicks: this.buildTicks(yMin, yMax)
         };
+        this.curveChartCache.set(cacheKey, chart);
+        return chart;
     }
 
     getCurveMatrix(paramId: string): {
         xLabel: string;
         yLabel: string;
         variants: Array<{ id: string; name: string; color: string }>;
-        rows: Array<{ label: string; x: number | ''; values: Record<string, number | ''> }>;
+        rows: Array<{ index: number; label: string; x: number | ''; values: Record<string, number | ''> }>;
     } | null {
+        const cacheKey = this.curveCacheKey(paramId);
+        if (this.curveMatrixCache.has(cacheKey)) {
+            return this.curveMatrixCache.get(cacheKey) ?? null;
+        }
+
         const visibleVariants = this.dataService.variants
             .filter(variant => this.isCurveVariantVisible(paramId, variant.id))
             .map(variant => ({
@@ -374,12 +473,15 @@ export class SheetComponent implements OnInit {
             }))
             .filter((variant): variant is { id: string; name: string; color: string; curve: CurveValue } => !!variant.curve);
 
-        if (visibleVariants.length === 0) return null;
+        if (visibleVariants.length === 0) {
+            this.curveMatrixCache.set(cacheKey, null);
+            return null;
+        }
 
         const baseCurve = visibleVariants[0].curve;
         const rowCount = Math.max(...visibleVariants.map(variant => variant.curve.points.length));
 
-        const rows: Array<{ label: string; x: number | ''; values: Record<string, number | ''> }> = Array.from({ length: rowCount }, (_, index) => {
+        const rows: Array<{ index: number; label: string; x: number | ''; values: Record<string, number | ''> }> = Array.from({ length: rowCount }, (_, index) => {
             const basePoint = baseCurve.points[index];
             const values: Record<string, number | ''> = {};
             const xValue = basePoint ? Number(basePoint.x) : NaN;
@@ -390,32 +492,35 @@ export class SheetComponent implements OnInit {
             }
 
             return {
+                index,
                 label: basePoint?.label || `${index + 1}`,
                 x: Number.isFinite(xValue) ? xValue : '',
                 values
             };
         });
 
-        return {
-            xLabel: this.formatAxisLabel(baseCurve.xLabel, baseCurve.xUnit),
-            yLabel: this.formatAxisLabel(baseCurve.yLabel, baseCurve.yUnit),
+        const matrix = {
+            xLabel: this.formatAxisLabel(baseCurve.xLabel),
+            yLabel: this.formatAxisLabel(baseCurve.yLabel),
             variants: visibleVariants.map(({ id, name, color }) => ({ id, name, color })),
             rows
         };
+        this.curveMatrixCache.set(cacheKey, matrix);
+        return matrix;
     }
 
     axisX(value: number, ticks: number[]): number {
         const min = Math.min(...ticks);
         const max = Math.max(...ticks);
         const range = max - min || 1;
-        return 52 + ((value - min) / range) * 408;
+        return this.chartBounds.left + ((value - min) / range) * this.chartBounds.width;
     }
 
     axisY(value: number, ticks: number[]): number {
         const min = Math.min(...ticks);
         const max = Math.max(...ticks);
         const range = max - min || 1;
-        return 200 - ((value - min) / range) * 152;
+        return this.chartBounds.bottom - ((value - min) / range) * this.chartBounds.height;
     }
 
     formatTick(value: number): string {
@@ -439,10 +544,12 @@ export class SheetComponent implements OnInit {
         if (visibleVariants.has(variantId)) {
             if (visibleVariants.size === 1) return;
             visibleVariants.delete(variantId);
+            this.invalidateCurveCaches();
             return;
         }
 
         visibleVariants.add(variantId);
+        this.invalidateCurveCaches();
     }
 
     isCurveVariantVisible(paramId: string, variantId: string): boolean {
@@ -474,10 +581,70 @@ export class SheetComponent implements OnInit {
         return Array.from({ length: tickCount }, (_, index) => min + ((max - min) / (tickCount - 1)) * index);
     }
 
-    private formatAxisLabel(label: string, unit?: string): string {
-        const trimmedLabel = label.trim();
-        const trimmedUnit = (unit ?? '').trim();
-        return trimmedUnit ? `${trimmedLabel} ${trimmedUnit}` : trimmedLabel;
+    updateCurveXAxis(paramId: string, rowIndex: number, newValue: string): void {
+        if (!this.can('edit_parameter_values')) return;
+        if (this.dataService.variants.some(v => this.isValueLockedForCurrentRole(paramId, v.id))) return;
+        const parsedValue = this.parseCurveNumber(newValue);
+        if (parsedValue === null) return;
+
+        for (const variant of this.dataService.variants) {
+            const curve = this.getCurveValue(variant.id, paramId);
+            if (!curve || !curve.points[rowIndex]) continue;
+            curve.points[rowIndex].x = parsedValue;
+            this.markCurveAsManual(variant.id, paramId);
+        }
+        this.invalidateCurveCaches();
+    }
+
+    updateCurveYAxis(paramId: string, variantId: string, rowIndex: number, newValue: string): void {
+        if (!this.can('edit_parameter_values')) return;
+        if (this.isValueLockedForCurrentRole(paramId, variantId)) return;
+        const parsedValue = this.parseCurveNumber(newValue);
+        if (parsedValue === null) return;
+
+        const curve = this.getCurveValue(variantId, paramId);
+        if (!curve || !curve.points[rowIndex]) return;
+
+        curve.points[rowIndex].y = parsedValue;
+        this.markCurveAsManual(variantId, paramId);
+        this.invalidateCurveCaches();
+    }
+
+    curveGridTemplate(variantCount: number): string {
+        return `130px 140px repeat(${variantCount}, minmax(140px, 1fr))`;
+    }
+
+    private markCurveAsManual(variantId: string, paramId: string): void {
+        const variant = this.dataService.variants.find(v => v.id === variantId);
+        const existing = variant?.values[paramId];
+        if (!existing) return;
+        existing.source = 'Manual';
+        if (!existing.trustLevel || ['Imported', 'From EPC', 'Estimation'].includes(existing.trustLevel)) {
+            existing.trustLevel = 'Not set';
+        }
+        existing.isMissing = false;
+    }
+
+    private parseCurveNumber(rawValue: string): number | null {
+        const normalizedValue = String(rawValue ?? '').trim().replace(',', '.');
+        if (!normalizedValue) return null;
+        const parsedValue = Number(normalizedValue);
+        return Number.isFinite(parsedValue) ? parsedValue : null;
+    }
+
+    private curveCacheKey(paramId: string): string {
+        const visible = [...this.getOrCreateVisibleCurveVariants(paramId)].sort().join('|');
+        return `${paramId}::${this.curveCacheRevision}::${visible}`;
+    }
+
+    private invalidateCurveCaches(): void {
+        this.curveCacheRevision += 1;
+        this.curveChartCache.clear();
+        this.curveMatrixCache.clear();
+    }
+
+    private formatAxisLabel(label: string): string {
+        return label.trim();
     }
 
     private isCurveValue(value: any): value is CurveValue {
