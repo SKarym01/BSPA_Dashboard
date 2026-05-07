@@ -6,8 +6,8 @@
 /* Bosch Sans */
 @font-face {
     font-family: 'boschsans';
-    src: url('/assets/fonts/boschsans_regular.woff2') format('woff2'),
-         url('/assets/fonts/boschsans_regular.woff') format('woff');
+    src: url('assets/fonts/boschsans_regular.woff2') format('woff2'),
+         url('assets/fonts/boschsans_regular.woff') format('woff');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -15,8 +15,8 @@
 
 @font-face {
     font-family: 'boschsans';
-    src: url('/assets/fonts/boschsans_bold.woff2') format('woff2'),
-         url('/assets/fonts/boschsans_bold.woff') format('woff');
+    src: url('assets/fonts/boschsans_bold.woff2') format('woff2'),
+         url('assets/fonts/boschsans_bold.woff') format('woff');
     font-weight: 700;
     font-style: normal;
     font-display: swap;
