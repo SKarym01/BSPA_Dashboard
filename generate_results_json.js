@@ -9,6 +9,7 @@ const detailedData = xlsx.utils.sheet_to_json(detailedSheet, { header: 1 });
 
 const summarySheet = workbook.Sheets['Summary'];
 
+
 const categories = [];
 let currentCategory = null;
 

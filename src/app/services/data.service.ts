@@ -8,6 +8,14 @@
 
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import {
+  EvaluationDetail,
+  ExtractedParameterViewDto,
+  ValidationCurveDto,
+  ValidationFindingDto,
+  ValidationViewDto,
+  ValidationVariantViewDto,
+} from '../core/api/evaluations-api.service';
 
 // =========================
 // TYPES & INTERFACES
@@ -145,6 +153,8 @@ export class DataService {
   };
 
   projectDescription: ProjectDescriptionItem[] = [];
+  currentEvaluation: EvaluationDetail | null = null;
+  currentValidationView: ValidationViewDto | null = null;
 
   /** Available customers for dropdowns */
   customers: string[] = ['ESP', 'IPB'];
@@ -223,9 +233,204 @@ export class DataService {
   resetProjectData() {
     this.projectData = { projectName: '', customer: '', internalNotes: '', epcNumber: '' };
     this.projectDescription = [];
+    this.currentEvaluation = null;
+    this.currentValidationView = null;
     this.statusCheckData = { jiraTicketNumber: '', bspaNumber: '', epcNumber: '' };
     this.variants.forEach((v) => (v.values = {}));
     this.updateWorkflowStep('CUSTOMER_DATA');
+  }
+
+  applyBackendValidation(evaluation: EvaluationDetail, validationView: ValidationViewDto | null): void {
+    this.currentEvaluation = evaluation;
+    this.currentValidationView = validationView;
+
+    if (!validationView) {
+      return;
+    }
+
+    this.projectDescription = Object.entries(validationView.project_info ?? {}).map(([key, value]) => ({
+      key,
+      value: String(value ?? ''),
+    }));
+
+    const projectName = validationView.project_info?.['Project Name']
+      ?? validationView.project_info?.['project_name']
+      ?? this.projectData.projectName;
+    const customer = validationView.project_info?.['Customer']
+      ?? validationView.project_info?.['customer']
+      ?? this.projectData.customer;
+
+    this.projectData = {
+      ...this.projectData,
+      projectName: String(projectName ?? ''),
+      customer: String(customer ?? ''),
+      epcNumber: this.projectData.epcNumber,
+    };
+
+    const parameterMeta = new Map<string, {
+      id: string;
+      name: string;
+      type: ParameterRow['type'];
+      mandatoryStatus: MandatoryStatus;
+      unit?: string;
+      groupName: string;
+      order: number;
+    }>();
+    const groupOrder = new Map<string, number>();
+
+    let nextGroupOrder = 0;
+    let nextParamOrder = 0;
+
+    const registerGroup = (groupName: string): void => {
+      if (!groupOrder.has(groupName)) {
+        groupOrder.set(groupName, nextGroupOrder++);
+      }
+    };
+
+    const registerParameter = (
+      paramName: string,
+      options?: {
+        groupName?: string;
+        type?: ParameterRow['type'];
+        mandatoryStatus?: MandatoryStatus;
+      }
+    ): string => {
+      const normalizedName = String(paramName ?? '').trim();
+      const id = this.makeParameterId(normalizedName);
+      const groupName = options?.groupName?.trim() || 'Extracted Parameters';
+      registerGroup(groupName);
+
+      const existing = parameterMeta.get(id);
+      const nextStatus = this.mergeMandatoryStatus(
+        existing?.mandatoryStatus ?? 'optional',
+        options?.mandatoryStatus ?? 'optional'
+      );
+
+      if (existing) {
+        existing.mandatoryStatus = nextStatus;
+        if (this.isGenericBackendGroup(existing.groupName) && !this.isGenericBackendGroup(groupName)) {
+          existing.groupName = groupName;
+        }
+        if (existing.type !== 'curve' && options?.type === 'curve') {
+          existing.type = 'curve';
+        }
+        return id;
+      }
+
+      parameterMeta.set(id, {
+        id,
+        name: normalizedName,
+        type: options?.type ?? 'text',
+        mandatoryStatus: nextStatus,
+        groupName,
+        order: nextParamOrder++,
+      });
+      return id;
+    };
+
+    for (const variant of validationView.variants ?? []) {
+      for (const group of variant.parameter_groups ?? []) {
+        registerGroup(group.name || 'Backend Parameters');
+      }
+
+      for (const parameter of variant.extracted_parameters ?? []) {
+        const parameterName = this.getExtractedParameterName(parameter);
+        if (!parameterName) continue;
+        const extractedGroupName = this.getExtractedParameterGroupName(parameter);
+
+        registerParameter(parameterName, {
+          type: this.inferParameterType(parameter.value),
+          groupName: extractedGroupName
+            || this.findGroupNameForParameter(variant, parameterName, 'Backend Parameters'),
+          mandatoryStatus: this.findMandatoryStatusForParameter(variant, parameterName),
+        });
+      }
+
+      for (const curve of variant.curves ?? []) {
+        registerParameter(curve.name, {
+          type: 'curve',
+          groupName: this.findGroupNameForParameter(variant, curve.name, 'Backend Parameters'),
+          mandatoryStatus: this.findMandatoryStatusForParameter(variant, curve.name),
+        });
+      }
+    }
+
+    const groups = new Map<string, ParameterRow[]>();
+    for (const meta of [...parameterMeta.values()].sort((a, b) => a.order - b.order)) {
+      const rows = groups.get(meta.groupName) ?? [];
+      rows.push({
+        id: meta.id,
+        name: meta.name,
+        type: meta.type,
+        unit: meta.unit ?? '',
+        mandatoryStatus: meta.mandatoryStatus,
+        userComment: '',
+      });
+      groups.set(meta.groupName, rows);
+    }
+
+    this.parameterGroups = [...groups.entries()]
+      .sort((a, b) => (groupOrder.get(a[0]) ?? 0) - (groupOrder.get(b[0]) ?? 0))
+      .map(([groupName, parameters]) => ({ groupName, parameters }));
+
+    this.variants = (validationView.variants ?? []).map((variant, variantIndex) => {
+      const values: ProductVariant['values'] = {};
+
+      for (const parameter of variant.extracted_parameters ?? []) {
+        const parameterName = this.getExtractedParameterName(parameter);
+        if (!parameterName) continue;
+        const extractedGroupName = this.getExtractedParameterGroupName(parameter);
+
+        const paramId = registerParameter(parameterName, {
+          type: this.inferParameterType(parameter.value),
+          groupName: extractedGroupName
+            || this.findGroupNameForParameter(variant, parameterName, 'Backend Parameters'),
+          mandatoryStatus: this.findMandatoryStatusForParameter(variant, parameterName),
+        });
+        values[paramId] = {
+          value: parameter.value,
+          source: parameter.source === 'default_applied' ? 'Estimation' : 'Imported',
+          isMissing: this.isEmptyValue(parameter.value),
+          trustLevel: parameter.source === 'default_applied' ? 'Estimation' : 'Imported',
+        };
+      }
+
+      for (const curve of variant.curves ?? []) {
+        const paramId = registerParameter(curve.name, {
+          type: 'curve',
+          groupName: this.findGroupNameForParameter(variant, curve.name, 'Backend Parameters'),
+          mandatoryStatus: this.findMandatoryStatusForParameter(variant, curve.name),
+        });
+        values[paramId] = {
+          value: this.mapCurveDto(curve),
+          source: 'Imported',
+          isMissing: !curve.points?.length && !curve.series?.length,
+          trustLevel: 'Imported',
+        };
+      }
+
+      for (const finding of variant.findings ?? []) {
+        if (!finding.parameter_name) continue;
+        const findingName = this.normalizeParameterName(finding.parameter_name);
+        const mappedCode = this.mapFindingCodeToMandatoryStatus(finding.code);
+
+        for (const [paramId, value] of Object.entries(values)) {
+          const currentName = this.normalizeParameterName(parameterMeta.get(paramId)?.name);
+          if (currentName !== findingName) continue;
+
+          if (mappedCode === 'mandatory') {
+            // Findings status is authoritative for validation state.
+            value.isMissing = true;
+          }
+        }
+      }
+
+      return {
+        id: `v${variantIndex + 1}`,
+        name: variant.variant_name || `Variant ${variantIndex + 1}`,
+        values,
+      };
+    });
   }
 
   /**
@@ -360,5 +565,139 @@ export class DataService {
     });
 
     return mockData;
+  }
+
+  private makeParameterId(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      || `param_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private inferParameterType(value: unknown): ParameterRow['type'] {
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'string') {
+      const normalized = value.trim().replace(',', '.');
+      if (normalized && !Number.isNaN(Number(normalized))) return 'number';
+    }
+    return 'text';
+  }
+
+  private isEmptyValue(value: unknown): boolean {
+    return value === '' || value === null || value === undefined;
+  }
+
+  private mergeMandatoryStatus(
+    current: MandatoryStatus,
+    next: MandatoryStatus
+  ): MandatoryStatus {
+    const rank: Record<MandatoryStatus, number> = {
+      mandatory: 3,
+      'semi-mandatory': 2,
+      optional: 1,
+      irrelevant: 0,
+    };
+    return rank[next] > rank[current] ? next : current;
+  }
+
+  private mapFindingCodeToMandatoryStatus(code: string | undefined): MandatoryStatus {
+    switch (code) {
+      case 'MISSING_REQUIRED':
+        return 'mandatory';
+      case 'MISSING_ASSUMED':
+      case 'DEFAULT_APPLIED':
+        return 'semi-mandatory';
+      default:
+        return 'optional';
+    }
+  }
+
+  private findGroupNameForParameter(
+    variant: ValidationVariantViewDto,
+    parameterName: string,
+    fallback = 'Backend Parameters'
+  ): string {
+    const parameterKey = this.normalizeParameterName(parameterName);
+
+    const matchedExtractedParameter = (variant.extracted_parameters ?? [])
+      .find(parameter => this.normalizeParameterName(this.getExtractedParameterName(parameter)) === parameterKey);
+
+    const extractedGroupName = matchedExtractedParameter
+      ? this.getExtractedParameterGroupName(matchedExtractedParameter)
+      : '';
+
+    if (extractedGroupName && String(extractedGroupName).trim()) {
+      return String(extractedGroupName).trim();
+    }
+
+    return fallback;
+  }
+
+  private normalizeParameterName(value: unknown): string {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
+
+  private findMandatoryStatusForParameter(
+    variant: ValidationVariantViewDto,
+    parameterName: string
+  ): MandatoryStatus {
+    const parameterKey = this.normalizeParameterName(parameterName);
+    const statuses = (variant.findings ?? [])
+      .filter(finding => this.normalizeParameterName(finding.parameter_name) === parameterKey)
+      .map(finding => this.mapFindingCodeToMandatoryStatus(finding.code));
+
+    return statuses.reduce<MandatoryStatus>(
+      (current, next) => this.mergeMandatoryStatus(current, next),
+      'optional'
+    );
+  }
+
+  private getExtractedParameterName(parameter: ExtractedParameterViewDto): string {
+    return String(parameter?.name ?? '').trim();
+  }
+
+  private getExtractedParameterGroupName(parameter: ExtractedParameterViewDto): string {
+    const raw = parameter as unknown as {
+      group_name?: unknown;
+      groupName?: unknown;
+      group?: unknown;
+    };
+    return String(raw?.group_name ?? raw?.groupName ?? raw?.group ?? '').trim();
+  }
+
+  private isGenericBackendGroup(groupName: string | undefined): boolean {
+    const normalized = String(groupName ?? '').trim().toLowerCase();
+    return normalized === 'backend parameters' || normalized === 'extracted parameters';
+  }
+
+  private mapCurveDto(curve: ValidationCurveDto): CurveValue {
+    const defaultXLabel = curve.series?.[0]?.label || 'X';
+    const defaultYLabel = curve.series?.[1]?.label || curve.name;
+
+    if (curve.points?.length) {
+      return {
+        xLabel: defaultXLabel,
+        yLabel: defaultYLabel,
+        points: curve.points.map(point => ({
+          x: point.x,
+          y: point.y,
+        })),
+      };
+    }
+
+    const xSeries = curve.series?.[0]?.values ?? [];
+    const ySeries = curve.series?.[1]?.values ?? [];
+    return {
+      xLabel: defaultXLabel,
+      yLabel: defaultYLabel,
+      points: xSeries.map((x, index) => ({
+        x,
+        y: ySeries[index] ?? 0,
+      })),
+    };
   }
 }

@@ -41,3 +41,9 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Generated API client (regenerated from openapi.json via `npm run api:sync`).
+# openapi.json itself IS committed so builds are offline-reproducible and
+# drift vs. backend shows up in code review.
+/src/app/api/generated
+/.openapi-generator-cli

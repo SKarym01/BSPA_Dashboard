@@ -4,6 +4,7 @@
 import { Component, ElementRef, NgZone, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DataService, ParameterRow, ParameterValue, WorkflowStep, TrustLevel } from '../../services/data.service';
 import { MambaService, MambaResult } from '../../services/mamba.service';
@@ -12,6 +13,7 @@ import { read, utils, writeFile } from 'xlsx';
 import { ExcelExtractor } from '../../utils/excel-extractor';
 import { MOCK_RESULTS_DATA } from '../../utils/mock-results.data';
 import { PARSED_RESULTS_DATA } from '../../utils/parsed-results.data';
+import { EvaluationDetailWithValidationDto, EvaluationsApiService } from '../../core/api/evaluations-api.service';
 
 @Component({
   standalone: true,
@@ -40,6 +42,7 @@ export class NewBspaComponent implements OnInit {
     public dataService: DataService,
     public roleService: RoleService,
     private mambaService: MambaService,
+    private evaluationsApi: EvaluationsApiService,
     private route: ActivatedRoute,
     private router: Router,
     private zone: NgZone // ✅ FIX: injected properly
@@ -451,6 +454,82 @@ export class NewBspaComponent implements OnInit {
       return;
     }
 
+    this.evaluationsApi.uploadEvaluation(file, {
+      label: this.epcNumber || undefined,
+    }).subscribe({
+      next: (response: EvaluationDetailWithValidationDto) => {
+        this.zone.run(() => {
+          this.logBackendValidationDebug(response);
+          this.dataService.applyBackendValidation(response.evaluation, response.validation_view);
+          this.finishUploadFlowAfterValidation(input);
+        });
+      },
+      error: (error: HttpErrorResponse) => {
+        console.warn('Backend upload failed, falling back to local parser.', error);
+        this.parseUploadedFileLocally(file, input);
+      },
+    });
+  }
+
+  private logBackendValidationDebug(response: EvaluationDetailWithValidationDto): void {
+    const view = response.validation_view;
+    if (!view) {
+      console.error('[BSPA Debug] validation_view is null in backend response.');
+      return;
+    }
+
+    (window as any).__BSPA_LAST_VALIDATION_VIEW__ = view;
+    (window as any).__BSPA_LAST_VALIDATION_VARIANTS__ = view.variants ?? [];
+
+    console.warn('[BSPA Debug] Upload response received. Type __BSPA_LAST_VALIDATION_VIEW__ in console to inspect payload.');
+
+    console.groupCollapsed('[BSPA Debug] validation_view overview');
+    console.log('generated_at:', view.generated_at);
+    console.log('input_sheet_name:', view.input_sheet_name);
+    console.log('variant_count:', (view.variants ?? []).length);
+
+    for (const [index, variant] of (view.variants ?? []).entries()) {
+      const extracted = variant.extracted_parameters ?? [];
+      const withGroupName = extracted.filter(p => String((p as any)?.group_name ?? '').trim() !== '').length;
+      const withGroupNameCamel = extracted.filter(p => String((p as any)?.groupName ?? '').trim() !== '').length;
+      const fallbackGroupCount = extracted.filter(p => {
+        const group = String((p as any)?.group_name ?? (p as any)?.groupName ?? (p as any)?.group ?? '').trim().toLowerCase();
+        return group === 'backend parameters' || group === 'extracted parameters';
+      }).length;
+
+      console.groupCollapsed(`[BSPA Debug] variant ${index + 1}: ${variant.variant_name || 'N/A'}`);
+      console.log('extracted_parameters:', extracted.length);
+      console.log('findings:', (variant.findings ?? []).length);
+      console.log('with group_name:', withGroupName);
+      console.log('with groupName:', withGroupNameCamel);
+      console.log('fallback-group count:', fallbackGroupCount);
+      console.log('sample extracted parameter keys:', Object.keys((extracted[0] as any) ?? {}));
+      console.log('sample extracted parameters:', extracted.slice(0, 5));
+      console.groupEnd();
+    }
+
+    console.groupEnd();
+  }
+
+  private finishUploadFlowAfterValidation(input: HTMLInputElement): void {
+    const backendEpc = this.dataService.projectData.epcNumber;
+    if (backendEpc) {
+      this.epcNumber = backendEpc;
+    } else if (this.epcNumber) {
+      this.dataService.projectData.epcNumber = this.epcNumber;
+    }
+
+    this.hasUploadedInputSheet = true;
+    if (this.epcNumber) this.loadEpcData();
+
+    this.dataService.updateWorkflowStep('INPUT_SHEET');
+    this.currentStep = 'INPUT_SHEET';
+    this.router.navigate(['/validation']);
+    input.value = '';
+  }
+
+  private parseUploadedFileLocally(file: File, input: HTMLInputElement): void {
+
     const fileReader = new FileReader();
 
     fileReader.onload = e => {
@@ -532,15 +611,7 @@ export class NewBspaComponent implements OnInit {
           }
 
           // ✅ AFTER UPLOAD: go directly to VALIDATION
-          this.hasUploadedInputSheet = true;
-          this.dataService.projectData.epcNumber = this.epcNumber;
-          if (this.epcNumber) this.loadEpcData();
-
-          this.dataService.updateWorkflowStep('INPUT_SHEET');
-          this.currentStep = 'INPUT_SHEET';
-
-          // Validation UI is on /validation route
-          this.router.navigate(['/validation']);
+          this.finishUploadFlowAfterValidation(input);
 
         } catch (err) {
           console.error('Error parsing Excel file:', err);
@@ -550,7 +621,6 @@ export class NewBspaComponent implements OnInit {
     };
 
     fileReader.readAsArrayBuffer(file);
-    input.value = '';
   }
 
   getPV(variantId: string, paramId: string): ParameterValue | undefined {
